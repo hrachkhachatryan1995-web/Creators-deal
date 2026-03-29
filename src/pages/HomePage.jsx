@@ -26,24 +26,24 @@ export default function HomePage() {
   const rootRef = useRevealAnimation({ cardStagger: 0.1 })
 
   return (
-    <div ref={rootRef} className="space-y-6">
-      <section className="hero-banner glow-border relative rounded-[2.25rem] panel px-6 py-8 sm:px-10 sm:py-12">
+    <div ref={rootRef} className="space-y-4 sm:space-y-6">
+      <section className="hero-banner glow-border relative rounded-[1.8rem] panel px-5 py-7 sm:rounded-[2.25rem] sm:px-10 sm:py-12">
         <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_0.9fr]">
           <div>
             <span data-hero className="eyebrow">
               Creator Deal Intelligence
             </span>
-            <h1 data-hero className="gradient-text mt-5 max-w-3xl text-4xl leading-tight sm:text-5xl lg:text-6xl">
+            <h1 data-hero className="gradient-text mt-4 max-w-3xl text-[2.15rem] leading-tight sm:mt-5 sm:text-5xl lg:text-6xl">
               Know your worth before you answer a brand
             </h1>
-            <p data-hero className="mt-5 max-w-2xl text-base leading-8 text-[var(--muted)]">
+            <p data-hero className="mt-4 max-w-2xl text-sm leading-7 text-[var(--muted)] sm:mt-5 sm:text-base sm:leading-8">
               Creator Deal Assistant helps content creators price deals fairly, understand offer quality, and reply with confidence instead of guessing on the spot.
             </p>
-            <div data-hero className="mt-7 flex flex-wrap gap-3">
-              <Link to="/tools" className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(108,92,231,0.30)] transition hover:translate-y-[-1px] hover:opacity-95">
+            <div data-hero className="mt-6 flex flex-wrap gap-2.5 sm:mt-7 sm:gap-3">
+              <Link to="/tools" className="rounded-full bg-[var(--primary)] px-5 py-2.5 text-xs font-semibold text-white shadow-[0_12px_24px_rgba(108,92,231,0.30)] transition hover:translate-y-[-1px] hover:opacity-95 sm:px-6 sm:py-3 sm:text-sm">
                 Open the tools
               </Link>
-              <Link to="/about" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.03)] px-6 py-3 text-sm font-semibold text-[var(--ink)] transition hover:bg-[rgba(255,255,255,0.06)]">
+              <Link to="/about" className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.03)] px-5 py-2.5 text-xs font-semibold text-[var(--ink)] transition hover:bg-[rgba(255,255,255,0.06)] sm:px-6 sm:py-3 sm:text-sm">
                 See why it works
               </Link>
             </div>

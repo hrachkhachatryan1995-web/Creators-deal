@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://influenser-calculator.vercel.app/sitemap.xml

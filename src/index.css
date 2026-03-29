@@ -57,6 +57,10 @@ h3 {
   min-height: 100vh;
 }
 
+.app-shell {
+  position: relative;
+}
+
 @keyframes revealUp {
   from {
     opacity: 0;
@@ -209,4 +213,23 @@ h3 {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
+}
+
+@media (max-width: 1023px) {
+  body {
+    background:
+      radial-gradient(760px 360px at 50% -10%, rgba(108, 92, 231, 0.3) 0%, transparent 70%),
+      radial-gradient(760px 360px at 50% 110%, rgba(0, 212, 255, 0.12) 0%, transparent 70%),
+      linear-gradient(180deg, #0b1222, #0f172a 48%, #0b1222);
+  }
+
+  .app-shell {
+    max-width: 560px;
+  }
+}
+
+@supports (padding: max(0px)) {
+  .app-shell {
+    padding-bottom: max(6rem, env(safe-area-inset-bottom));
+  }
 }
