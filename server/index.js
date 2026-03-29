@@ -7,11 +7,14 @@ dotenv.config()
 
 const app = express()
 const port = 5000
-const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+const huggingFaceModel = process.env.HUGGINGFACE_MODEL || 'HuggingFaceH4/zephyr-7b-beta'
+const aiProvider = process.env.AI_PROVIDER || 'auto'
 const includeDebug = process.env.NODE_ENV !== 'production'
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null
+const huggingFaceApiKey = process.env.HUGGINGFACE_API_KEY || ''
 
 app.use(cors())
 app.use(express.json())
@@ -98,6 +101,30 @@ function getSafeErrorDetails(error) {
   }
 }
 
+function resolveProviderOrder() {
+  const available = {
+    huggingface: Boolean(huggingFaceApiKey),
+    openai: Boolean(openai),
+  }
+
+  if (aiProvider === 'huggingface') {
+    return available.huggingface ? ['huggingface'] : []
+  }
+
+  if (aiProvider === 'openai') {
+    return available.openai ? ['openai'] : []
+  }
+
+  const providers = []
+  if (available.huggingface) {
+    providers.push('huggingface')
+  }
+  if (available.openai) {
+    providers.push('openai')
+  }
+  return providers
+}
+
 function generateReply({ brandMessage, targetPrice, offerStatus, brandOffer, negotiationContext }) {
   const normalizedMessage = String(brandMessage || '').trim()
   const offeredBudget = Number(brandOffer) || extractBudgetFromMessage(normalizedMessage)
@@ -159,7 +186,7 @@ async function generateReplyWithAI({ brandMessage, targetPrice, offerStatus, neg
   ].join('\n')
 
   const response = await openai.responses.create({
-    model,
+    model: openaiModel,
     input: [
       {
         role: 'system',
@@ -173,6 +200,85 @@ async function generateReplyWithAI({ brandMessage, targetPrice, offerStatus, neg
   })
 
   return response.output_text?.trim() || generateReply({ brandMessage, targetPrice, offerStatus })
+}
+
+async function generateReplyWithHuggingFace({ brandMessage, targetPrice, offerStatus, negotiationContext }) {
+  const systemPrompt =
+    'You help creators negotiate brand deals. Write concise, professional, confident, and polite replies. Output only the final reply.'
+
+  const userPrompt = [
+    `Brand message: ${brandMessage}`,
+    `Offer status: ${offerStatus}`,
+    `Target price in USD: ${targetPrice}`,
+    `Negotiation context: ${JSON.stringify(negotiationContext || {})}`,
+    'Write a reply that thanks the brand, references scope/value, and proposes the target price clearly.',
+  ].join('\n')
+
+  const prompt = `<s>[INST] ${systemPrompt}\n\n${userPrompt} [/INST]`
+
+  const response = await fetch(`https://api-inference.huggingface.co/models/${huggingFaceModel}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${huggingFaceApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: 240,
+        temperature: 0.75,
+        return_full_text: false,
+      },
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Hugging Face request failed with status ${response.status}`)
+  }
+
+  const data = await response.json()
+  const generatedText =
+    (Array.isArray(data) && data[0]?.generated_text) ||
+    data?.generated_text ||
+    ''
+
+  return String(generatedText).trim()
+}
+
+async function generateReplyWithProvider(payload) {
+  const providerOrder = resolveProviderOrder()
+
+  if (providerOrder.length === 0) {
+    return null
+  }
+
+  let lastError = null
+
+  for (const provider of providerOrder) {
+    try {
+      if (provider === 'huggingface') {
+        const reply = await generateReplyWithHuggingFace(payload)
+        if (reply) {
+          return { reply, source: 'huggingface' }
+        }
+      }
+
+      if (provider === 'openai') {
+        const reply = await generateReplyWithAI(payload)
+        if (reply) {
+          return { reply, source: 'openai' }
+        }
+      }
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  if (lastError) {
+    throw lastError
+  }
+
+  return null
 }
 
 app.post('/api/reply', async (req, res) => {
@@ -194,7 +300,9 @@ app.post('/api/reply', async (req, res) => {
   }
 
   try {
-    if (!openai) {
+    const aiResult = await generateReplyWithProvider(payload)
+
+    if (!aiResult) {
       const fallbackResponse = {
         reply: generateReply(payload),
         source: 'template-fallback',
@@ -202,16 +310,17 @@ app.post('/api/reply', async (req, res) => {
 
       if (includeDebug) {
         fallbackResponse.debug = {
-          reason: 'OPENAI_API_KEY_MISSING',
-          model,
+          reason: 'NO_AI_PROVIDER_CONFIGURED',
+          aiProvider,
+          openaiModel,
+          huggingFaceModel,
         }
       }
 
       return res.json(fallbackResponse)
     }
 
-    const reply = await generateReplyWithAI(payload)
-    return res.json({ reply, source: 'openai' })
+    return res.json(aiResult)
   } catch (error) {
     console.error('AI generation failed, using fallback template:', error)
     const fallbackResponse = {
@@ -221,8 +330,10 @@ app.post('/api/reply', async (req, res) => {
 
     if (includeDebug) {
       fallbackResponse.debug = {
-        reason: 'OPENAI_REQUEST_FAILED',
-        model,
+        reason: 'AI_REQUEST_FAILED',
+        aiProvider,
+        openaiModel,
+        huggingFaceModel,
         error: getSafeErrorDetails(error),
       }
     }

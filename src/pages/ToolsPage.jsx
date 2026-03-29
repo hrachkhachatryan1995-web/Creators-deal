@@ -33,6 +33,8 @@ export default function ToolsPage() {
   const [brandOffer, setBrandOffer] = useState('120')
   const [brandMessage, setBrandMessage] = useState('Hi! We would love to collaborate on a short sponsored video. Our budget is $120 for this campaign.')
   const [reply, setReply] = useState('')
+  const [replySource, setReplySource] = useState('')
+  const [replyDebug, setReplyDebug] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [savedScenarios, setSavedScenarios] = useState([])
@@ -252,6 +254,8 @@ export default function ToolsPage() {
   const handleGenerateReply = async () => {
     if (!priceRange) {
       setReply('Please click "Calculate Pricing" first so I can generate a reply from the current quote.')
+      setReplySource('')
+      setReplyDebug('')
       return
     }
 
@@ -303,8 +307,19 @@ export default function ToolsPage() {
 
       const data = await response.json()
       setReply(data.reply)
+      setReplySource(data.source || '')
+      if (data.debug) {
+        const debugMessage = data.debug.error?.message
+          ? `${data.debug.reason}: ${data.debug.error.message}`
+          : data.debug.reason || ''
+        setReplyDebug(debugMessage)
+      } else {
+        setReplyDebug('')
+      }
     } catch {
       setReply('Hi, thank you for the offer. Based on the scope of this collaboration, my standard rate is higher, and the suggested range above is closer to what works for me. If that fits your budget, I would be happy to discuss next steps.')
+      setReplySource('template-fallback')
+      setReplyDebug('REQUEST_FAILED')
     } finally {
       setIsLoading(false)
     }
@@ -681,6 +696,16 @@ export default function ToolsPage() {
 
           <div className="mt-6 rounded-[1.5rem] panel-soft p-5">
             <p className="mb-2 text-sm font-semibold text-[var(--ink)]">Generated reply</p>
+            {replySource && (
+              <p className="mb-2 text-xs text-[var(--muted)]">
+                Source: <span className="font-semibold text-[var(--ink)]">{replySource}</span>
+              </p>
+            )}
+            {replyDebug && (
+              <p className="mb-2 text-xs text-[#fca5a5]">
+                Debug: <span className="font-semibold">{replyDebug}</span>
+              </p>
+            )}
             <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">
               {reply || 'Your generated brand reply will appear here.'}
             </p>
