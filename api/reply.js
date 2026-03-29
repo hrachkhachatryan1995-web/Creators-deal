@@ -8,7 +8,7 @@ const huggingFaceFallbackModels = (process.env.HUGGINGFACE_FALLBACK_MODELS || 'Q
   .map((item) => item.trim())
   .filter(Boolean)
 const aiProvider = process.env.AI_PROVIDER || 'auto'
-const includeDebug = process.env.NODE_ENV !== 'production'
+const includeDebug = true // temporarily always on for diagnostics
 const huggingFaceApiKey = process.env.HUGGINGFACE_API_KEY || ''
 const groqApiKey = process.env.GROQ_API_KEY || ''
 
