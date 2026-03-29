@@ -37,50 +37,86 @@ export default function ToolsPage() {
   const [copied, setCopied] = useState(false)
   const [savedScenarios, setSavedScenarios] = useState([])
   const [scenarioNotice, setScenarioNotice] = useState('')
+  const [submittedPricingInputs, setSubmittedPricingInputs] = useState(null)
+
+  const currentPricingInputs = useMemo(
+    () => ({
+      followers,
+      engagementRate,
+      avgViews,
+      avgStoryViews,
+      platform,
+      contentType,
+      multiPlatform,
+      secondaryPlatform,
+      secondaryFollowers,
+      secondaryEngagementRate,
+      secondaryAvgViews,
+      secondaryAvgStoryViews,
+      audienceOverlap,
+      bundleType,
+      pricingMode,
+      niche,
+      creatorTier,
+      productionLevel,
+      usageRights,
+      exclusivityDays,
+      deliverables,
+      turnaround,
+      revisions,
+      geo,
+    }),
+    [
+      followers,
+      engagementRate,
+      avgViews,
+      avgStoryViews,
+      platform,
+      contentType,
+      multiPlatform,
+      secondaryPlatform,
+      secondaryFollowers,
+      secondaryEngagementRate,
+      secondaryAvgViews,
+      secondaryAvgStoryViews,
+      audienceOverlap,
+      bundleType,
+      pricingMode,
+      niche,
+      creatorTier,
+      productionLevel,
+      usageRights,
+      exclusivityDays,
+      deliverables,
+      turnaround,
+      revisions,
+      geo,
+    ],
+  )
 
   const priceRange = useMemo(
-    () =>
-      calculatePrice({
-        followers,
-        engagementRate,
-        avgViews,
-        avgStoryViews,
-        platform,
-        contentType,
-        multiPlatform,
-        secondaryPlatform,
-        secondaryFollowers,
-        secondaryEngagementRate,
-        secondaryAvgViews,
-        secondaryAvgStoryViews,
-        audienceOverlap,
-        bundleType,
-        pricingMode,
-        niche,
-        creatorTier,
-        productionLevel,
-        usageRights,
-        exclusivityDays,
-        deliverables,
-        turnaround,
-        revisions,
-        geo,
-      }),
-    [followers, engagementRate, avgViews, avgStoryViews, platform, contentType, multiPlatform, secondaryPlatform, secondaryFollowers, secondaryEngagementRate, secondaryAvgViews, secondaryAvgStoryViews, audienceOverlap, bundleType, pricingMode, niche, creatorTier, productionLevel, usageRights, exclusivityDays, deliverables, turnaround, revisions, geo],
+    () => (submittedPricingInputs ? calculatePrice(submittedPricingInputs) : null),
+    [submittedPricingInputs],
   )
 
   const offerResult = useMemo(
-    () => analyzeOffer(brandOffer, priceRange),
+    () => (priceRange ? analyzeOffer(brandOffer, priceRange) : { status: 'Run calculation', betterPrice: 0 }),
     [brandOffer, priceRange],
   )
 
   const counterOffer = useMemo(() => {
-    if (priceRange.mode !== 'pro' || !priceRange.breakdown) {
+    if (!priceRange || priceRange.mode !== 'pro' || !priceRange.breakdown) {
       return offerResult.betterPrice
     }
 
     return Math.max(offerResult.betterPrice, priceRange.breakdown.recommendedAsk)
   }, [offerResult.betterPrice, priceRange])
+
+  const handleCalculatePricing = () => {
+    setSubmittedPricingInputs(currentPricingInputs)
+    setScenarioNotice('Pricing calculated')
+    setTimeout(() => setScenarioNotice(''), 1400)
+  }
 
   useEffect(() => {
     try {
@@ -104,6 +140,12 @@ export default function ToolsPage() {
   }
 
   const handleSaveScenario = () => {
+    if (!priceRange) {
+      setScenarioNotice('Click Calculate Pricing first')
+      setTimeout(() => setScenarioNotice(''), 1600)
+      return
+    }
+
     const scenario = {
       id: `${Date.now()}`,
       label: `${platform} ${contentType} • ${followers} followers`,
@@ -170,6 +212,34 @@ export default function ToolsPage() {
     setRevisions(String(scenario.revisions || '1'))
     setGeo(scenario.geo || 'global')
     setBrandOffer(String(scenario.brandOffer || '0'))
+
+    setSubmittedPricingInputs({
+      followers: String(scenario.followers || '0'),
+      engagementRate: String(scenario.engagementRate || '0'),
+      avgViews: String(scenario.avgViews || '0'),
+      avgStoryViews: String(scenario.avgStoryViews || '0'),
+      platform: scenario.platform || 'TikTok',
+      contentType: scenario.contentType || 'video',
+      multiPlatform: Boolean(scenario.multiPlatform),
+      secondaryPlatform: scenario.secondaryPlatform || 'Instagram',
+      secondaryFollowers: String(scenario.secondaryFollowers || '0'),
+      secondaryEngagementRate: String(scenario.secondaryEngagementRate || '0'),
+      secondaryAvgViews: String(scenario.secondaryAvgViews || '0'),
+      secondaryAvgStoryViews: String(scenario.secondaryAvgStoryViews || '0'),
+      audienceOverlap: String(scenario.audienceOverlap || '0'),
+      bundleType: scenario.bundleType || 'crosspost',
+      pricingMode: scenario.pricingMode || 'basic',
+      niche: scenario.niche || 'lifestyle',
+      creatorTier: scenario.creatorTier || 'steady',
+      productionLevel: scenario.productionLevel || 'standard',
+      usageRights: scenario.usageRights || 'organic',
+      exclusivityDays: String(scenario.exclusivityDays || '0'),
+      deliverables: String(scenario.deliverables || '1'),
+      turnaround: scenario.turnaround || 'standard',
+      revisions: String(scenario.revisions || '1'),
+      geo: scenario.geo || 'global',
+    })
+
     setScenarioNotice('Scenario loaded')
     setTimeout(() => setScenarioNotice(''), 1400)
   }
@@ -180,6 +250,11 @@ export default function ToolsPage() {
   }
 
   const handleGenerateReply = async () => {
+    if (!priceRange) {
+      setReply('Please click "Calculate Pricing" first so I can generate a reply from the current quote.')
+      return
+    }
+
     setIsLoading(true)
     setCopied(false)
 
@@ -465,11 +540,30 @@ export default function ToolsPage() {
             )}
           </div>
 
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button type="button" className="soft-button" onClick={handleCalculatePricing}>
+              Calculate Pricing
+            </button>
+            {!priceRange && (
+              <p className="self-center text-xs text-[var(--muted)]">
+                Fill the fields, then click Calculate Pricing.
+              </p>
+            )}
+          </div>
+
           <div className="mt-6 rounded-[1.5rem] border border-[rgba(0,200,83,0.18)] bg-[rgba(0,200,83,0.08)] p-5">
-            <p className="text-sm font-semibold text-[#8ff0b2]">
-              You should charge between ${priceRange.min} and ${priceRange.max} for this deal.
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[#c4f2d2]">{priceRange.explanation}</p>
+            {priceRange ? (
+              <>
+                <p className="text-sm font-semibold text-[#8ff0b2]">
+                  You should charge between ${priceRange.min} and ${priceRange.max} for this deal.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[#c4f2d2]">{priceRange.explanation}</p>
+              </>
+            ) : (
+              <p className="text-sm font-semibold text-[#8ff0b2]">
+                Pricing result will appear here after you click Calculate Pricing.
+              </p>
+            )}
 
             <div className="mt-4 flex flex-wrap gap-3">
               <button type="button" className="soft-secondary-button" onClick={handleSaveScenario}>
@@ -478,7 +572,7 @@ export default function ToolsPage() {
               {scenarioNotice && <p className="self-center text-xs font-semibold text-[#a3f4bf]">{scenarioNotice}</p>}
             </div>
 
-            {priceRange.mode === 'pro' && priceRange.breakdown && (
+            {priceRange?.mode === 'pro' && priceRange.breakdown && (
               <div className="mt-4 grid gap-2 text-xs text-[#c7f8d9] sm:grid-cols-2">
                 <p>Base rate: ${priceRange.breakdown.baseRate}</p>
                 <p>Primary platform: ${priceRange.breakdown.primaryRate}</p>
@@ -499,7 +593,7 @@ export default function ToolsPage() {
               </div>
             )}
 
-            {priceRange.mode === 'basic' && multiPlatform && priceRange.breakdown && (
+            {priceRange?.mode === 'basic' && multiPlatform && priceRange.breakdown && (
               <div className="mt-4 grid gap-2 text-xs text-[#c7f8d9] sm:grid-cols-2">
                 <p>Primary platform: ${priceRange.breakdown.primaryRate}</p>
                 <p>Primary views used: {priceRange.breakdown.primaryViews}</p>
@@ -549,9 +643,9 @@ export default function ToolsPage() {
             <p className="text-sm text-[var(--muted)]">Status</p>
             <p className="mt-1 text-2xl font-bold text-[var(--secondary)]">{offerResult.status}</p>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-              Suggested counter price: <span className="font-semibold text-[var(--ink)]">${counterOffer}</span>
+              Suggested counter price: <span className="font-semibold text-[var(--ink)]">${counterOffer || '-'}</span>
             </p>
-            {priceRange.mode === 'pro' && priceRange.breakdown && (
+            {priceRange?.mode === 'pro' && priceRange.breakdown && (
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
                 Walk-away floor: <span className="font-semibold text-[var(--ink)]">${priceRange.breakdown.minimumAccept}</span>
               </p>
