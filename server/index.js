@@ -47,31 +47,46 @@ function extractDeliverableFromMessage(message) {
   return match ? match[1] : null
 }
 
-function buildStatusParagraph({ offerStatus, targetPrice, offeredBudget, deliverable }) {
+function formatNegotiationTerms(negotiationContext) {
+  if (!negotiationContext || negotiationContext.pricingMode !== 'pro') {
+    return ''
+  }
+
+  const usageRights = negotiationContext.usageRights || 'organic'
+  const exclusivityDays = Number(negotiationContext.exclusivityDays) || 0
+  const deliverables = Number(negotiationContext.deliverables) || 1
+  const turnaround = negotiationContext.turnaround || 'standard'
+  const anchorRate = Math.round(Number(negotiationContext.anchorRate) || 0)
+
+  return `The quote includes ${deliverables} deliverable(s), ${usageRights} usage rights, ${exclusivityDays}-day exclusivity, and ${turnaround} delivery${anchorRate ? `, anchored around $${anchorRate}` : ''}.`
+}
+
+function buildStatusParagraph({ offerStatus, targetPrice, offeredBudget, deliverable, negotiationContext }) {
   const targetPriceText = formatMoney(targetPrice)
   const offeredBudgetText = offeredBudget ? formatMoney(offeredBudget) : null
   const deliverableText = deliverable || 'this collaboration'
+  const termsLine = formatNegotiationTerms(negotiationContext)
 
   if (offerStatus === 'Underpaid') {
     return pick([
-      `${offeredBudgetText ? `I saw the proposed budget of ${offeredBudgetText}. ` : ''}For ${deliverableText}, my rate would need to be closer to ${targetPriceText} to make sense on my side.`,
-      `${offeredBudgetText ? `Thanks for sharing the ${offeredBudgetText} budget. ` : ''}Given the scope of ${deliverableText}, I would be looking for ${targetPriceText}.`,
-      `Based on the production time and value involved in ${deliverableText}, my rate for this type of partnership is ${targetPriceText}.`,
+      `${offeredBudgetText ? `I saw the proposed budget of ${offeredBudgetText}. ` : ''}For ${deliverableText}, my rate would need to be closer to ${targetPriceText} to make sense on my side.${termsLine ? ` ${termsLine}` : ''}`,
+      `${offeredBudgetText ? `Thanks for sharing the ${offeredBudgetText} budget. ` : ''}Given the scope of ${deliverableText}, I would be looking for ${targetPriceText}.${termsLine ? ` ${termsLine}` : ''}`,
+      `Based on the production time and value involved in ${deliverableText}, my rate for this type of partnership is ${targetPriceText}.${termsLine ? ` ${termsLine}` : ''}`,
     ])
   }
 
   if (offerStatus === 'Good deal') {
     return pick([
-      `${offeredBudgetText ? `${offeredBudgetText} works for me, ` : ''}and I would be happy to move forward with ${deliverableText}.`,
-      `This feels aligned for ${deliverableText}, and I would be glad to continue with the next steps at ${targetPriceText}.`,
-      `The offer looks strong for ${deliverableText}, and I am open to moving ahead from here.`,
+      `${offeredBudgetText ? `${offeredBudgetText} works for me, ` : ''}and I would be happy to move forward with ${deliverableText}.${termsLine ? ` ${termsLine}` : ''}`,
+      `This feels aligned for ${deliverableText}, and I would be glad to continue with the next steps at ${targetPriceText}.${termsLine ? ` ${termsLine}` : ''}`,
+      `The offer looks strong for ${deliverableText}, and I am open to moving ahead from here.${termsLine ? ` ${termsLine}` : ''}`,
     ])
   }
 
   return pick([
-    `${offeredBudgetText ? `The budget you shared is in a workable range. ` : ''}I would be comfortable moving ahead at ${targetPriceText} for ${deliverableText}.`,
-    `This looks close to a fit, and ${targetPriceText} would be the right number for me on ${deliverableText}.`,
-    `I would be happy to proceed with ${deliverableText}, with ${targetPriceText} as the final rate.`,
+    `${offeredBudgetText ? `The budget you shared is in a workable range. ` : ''}I would be comfortable moving ahead at ${targetPriceText} for ${deliverableText}.${termsLine ? ` ${termsLine}` : ''}`,
+    `This looks close to a fit, and ${targetPriceText} would be the right number for me on ${deliverableText}.${termsLine ? ` ${termsLine}` : ''}`,
+    `I would be happy to proceed with ${deliverableText}, with ${targetPriceText} as the final rate.${termsLine ? ` ${termsLine}` : ''}`,
   ])
 }
 
@@ -83,7 +98,7 @@ function getSafeErrorDetails(error) {
   }
 }
 
-function generateReply({ brandMessage, targetPrice, offerStatus, brandOffer }) {
+function generateReply({ brandMessage, targetPrice, offerStatus, brandOffer, negotiationContext }) {
   const normalizedMessage = String(brandMessage || '').trim()
   const offeredBudget = Number(brandOffer) || extractBudgetFromMessage(normalizedMessage)
   const deliverable = extractDeliverableFromMessage(normalizedMessage)
@@ -108,6 +123,7 @@ function generateReply({ brandMessage, targetPrice, offerStatus, brandOffer }) {
     targetPrice,
     offeredBudget,
     deliverable,
+    negotiationContext,
   })
   const nextStep =
     offerStatus === 'Underpaid'
@@ -130,7 +146,7 @@ function generateReply({ brandMessage, targetPrice, offerStatus, brandOffer }) {
   return [greeting, opener, statusParagraph, nextStep, signOff].filter(Boolean).join('\n\n')
 }
 
-async function generateReplyWithAI({ brandMessage, targetPrice, offerStatus }) {
+async function generateReplyWithAI({ brandMessage, targetPrice, offerStatus, negotiationContext }) {
   const systemPrompt =
     'You are an assistant helping content creators negotiate brand collaborations. Write concise, professional, confident, and polite replies. Never be aggressive. Output only the reply message body with greeting and sign-off.'
 
@@ -138,6 +154,7 @@ async function generateReplyWithAI({ brandMessage, targetPrice, offerStatus }) {
     `Brand message: ${brandMessage}`,
     `Offer status: ${offerStatus}`,
     `Target price in USD: ${targetPrice}`,
+    `Negotiation context: ${JSON.stringify(negotiationContext || {})}`,
     'Write a reply that thanks the brand, references value delivered, and proposes the target price clearly.',
   ].join('\n')
 
@@ -159,7 +176,7 @@ async function generateReplyWithAI({ brandMessage, targetPrice, offerStatus }) {
 }
 
 app.post('/api/reply', async (req, res) => {
-  const { brandMessage, targetPrice, offerStatus, brandOffer } = req.body ?? {}
+  const { brandMessage, targetPrice, offerStatus, brandOffer, negotiationContext } = req.body ?? {}
 
   if (typeof brandMessage !== 'string') {
     return res.status(400).json({ error: 'brandMessage must be a string.' })
@@ -170,6 +187,10 @@ app.post('/api/reply', async (req, res) => {
     targetPrice: Number(targetPrice) || 0,
     offerStatus: offerStatus || 'Fair',
     brandOffer: Number(brandOffer) || 0,
+    negotiationContext:
+      negotiationContext && typeof negotiationContext === 'object'
+        ? negotiationContext
+        : {},
   }
 
   try {
