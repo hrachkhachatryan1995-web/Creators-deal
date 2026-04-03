@@ -25,5 +25,10 @@ export default function usePlan() {
 
   const isPaid = PAID_PLANS.includes(plan)
 
-  return { plan, isPaid }
+  function upgradeToPro() {
+    localStorage.setItem(PLAN_STORAGE_KEY, 'pro')
+    setPlan('pro')
+  }
+
+  return { plan, isPaid, upgradeToPro }
 }

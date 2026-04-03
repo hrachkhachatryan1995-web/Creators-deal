@@ -8,7 +8,33 @@ const SCENARIO_STORAGE_KEY = 'creator-deal-scenarios-v1'
 
 export default function ToolsPage() {
   const rootRef = useRevealAnimation({ cardStagger: 0.08 })
-  const { isPaid, plan } = usePlan()
+  const { isPaid, plan, upgradeToPro } = usePlan()
+  const [verifyEmail, setVerifyEmail] = useState('')
+  const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'loading' | 'error'
+  const [verifyError, setVerifyError] = useState('')
+
+  async function handleVerify(e) {
+    e.preventDefault()
+    setVerifyState('loading')
+    setVerifyError('')
+    try {
+      const res = await fetch('/api/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verifyEmail }),
+      })
+      const data = await res.json()
+      if (data.plan === 'pro') {
+        upgradeToPro()
+      } else {
+        setVerifyState('error')
+        setVerifyError('No active subscription found for that email.')
+      }
+    } catch {
+      setVerifyState('error')
+      setVerifyError('Could not reach the server. Please try again.')
+    }
+  }
   const [pricingMode, setPricingMode] = useState('pro')
   const [followers, setFollowers] = useState('50000')
   const [engagementRate, setEngagementRate] = useState('4.5')
@@ -364,15 +390,36 @@ export default function ToolsPage() {
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-[2rem] bg-[rgba(10,16,32,0.82)] backdrop-blur-sm px-8 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(108,92,231,0.18)] text-2xl">🔒</div>
               <div>
-                <p className="text-lg font-semibold text-[var(--ink)]">Pricing Calculator is a paid feature</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Upgrade to Pro or Studio to unlock unlimited pricing calculations and deal analysis.</p>
+                <p className="text-lg font-semibold text-[var(--ink)]">Pricing Calculator is a Pro feature</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Upgrade to Pro to unlock unlimited pricing calculations and deal analysis.</p>
               </div>
               <Link
                 to="/pricing"
                 className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(108,92,231,0.30)] transition hover:opacity-90"
               >
-                View plans
+                Upgrade to Pro
               </Link>
+              <div className="w-full max-w-xs">
+                <p className="mb-2 text-xs text-[var(--muted)]">Already paid? Enter your order email to restore access:</p>
+                <form onSubmit={handleVerify} className="flex flex-col gap-2">
+                  <input
+                    type="email"
+                    required
+                    placeholder="your@email.com"
+                    value={verifyEmail}
+                    onChange={(e) => { setVerifyEmail(e.target.value); setVerifyState('idle'); setVerifyError('') }}
+                    className="form-field text-sm"
+                  />
+                  {verifyError && <p className="text-xs text-red-400">{verifyError}</p>}
+                  <button
+                    type="submit"
+                    disabled={verifyState === 'loading'}
+                    className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-[var(--ink)] transition hover:bg-white/10 disabled:opacity-50"
+                  >
+                    {verifyState === 'loading' ? 'Checking…' : 'Restore access'}
+                  </button>
+                </form>
+              </div>
             </div>
           )}
           <h2 className="text-2xl text-[var(--ink)]">Pricing Calculator</h2>
