@@ -2,7 +2,7 @@ const redirectUrl = typeof window !== 'undefined'
   ? `${window.location.origin}/tools?plan=pro`
   : '/tools?plan=pro'
 const proUrl = import.meta.env.VITE_LS_PRO_URL
-  ? `${import.meta.env.VITE_LS_PRO_URL}?checkout%5Bredirect_url%5D=${encodeURIComponent(redirectUrl)}`
+  ? `${import.meta.env.VITE_LS_PRO_URL}?checkout[redirect_url]=${encodeURIComponent(redirectUrl)}`
   : null
 
 const plans = [
