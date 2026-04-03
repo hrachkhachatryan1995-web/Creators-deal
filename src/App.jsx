@@ -6,6 +6,7 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const ToolsPage = lazy(() => import('./pages/ToolsPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
+const OfferReplyPage = lazy(() => import('./pages/OfferReplyPage'))
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/tools" element={<ToolsPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/offer-reply" element={<OfferReplyPage />} />
         </Route>
       </Routes>
     </Suspense>

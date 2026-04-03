@@ -441,6 +441,109 @@ app.post('/api/reply', async (req, res) => {
   }
 })
 
+app.post('/api/offer-reply', async (req, res) => {
+  const { offerText, tone } = req.body ?? {}
+
+  if (typeof offerText !== 'string' || offerText.trim().length === 0) {
+    return res.status(400).json({ error: 'offerText must be a non-empty string.' })
+  }
+
+  const sanitizedOffer = offerText.slice(0, 3000)
+
+  const toneMap = {
+    professional: 'professional and formal',
+    warm: 'warm and friendly',
+    firm: 'firm and direct',
+  }
+  const toneLabel = toneMap[tone] || 'professional and balanced'
+
+  const systemPrompt =
+    'You are a professional content creator writing a reply to a brand collaboration offer. ' +
+    'Write a concise, confident, and polished reply letter. ' +
+    'Acknowledge the key details from the offer (budget, deliverables, campaign goals). ' +
+    'If the budget seems low or is missing, politely indicate your standard rates. ' +
+    'Close with a clear next step. Output only the reply letter body with greeting and sign-off.'
+
+  const userPrompt = [
+    `Brand offer / message:`,
+    `"""`,
+    sanitizedOffer,
+    `"""`,
+    ``,
+    `Write a ${toneLabel} reply from the creator's perspective. Reference the offer details, show interest, address the budget if mentioned, and propose clear next steps.`,
+  ].join('\n')
+
+  function generateFallbackReply(text) {
+    const match =
+      text.match(/(?:\$\s?|USD\s?)(\d+(?:,\d{3})*(?:\.\d{1,2})?)/i) ||
+      text.match(/(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s?(?:usd|dollars?)/i)
+    const budget = match ? Number(match[1].replace(/,/g, '')) : null
+    const budgetLine = budget
+      ? `Regarding the proposed budget of $${budget}, I would like to discuss whether we can align this with my standard rates for this type of collaboration.`
+      : 'I would appreciate the opportunity to discuss the budget and deliverables in more detail to ensure we are well aligned.'
+
+    return [
+      'Hi there,',
+      'Thank you for reaching out and sharing this collaboration opportunity. I appreciate you thinking of me for this campaign.',
+      budgetLine,
+      'I am excited about the potential of working together. Could you share any additional details about the campaign timeline, deliverables, and usage rights so I can give you a proper quote?',
+      'Looking forward to hearing from you,\n[Your Name]',
+    ].join('\n\n')
+  }
+
+  const providerOrder = resolveProviderOrder()
+
+  try {
+    for (const provider of providerOrder) {
+      if (provider === 'groq') {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${groqApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: groqModel,
+            temperature: 0.7,
+            max_tokens: 420,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          const reply = data?.choices?.[0]?.message?.content?.trim()
+          if (reply) return res.json({ reply, source: 'groq', model: groqModel })
+        }
+      }
+
+      if (provider === 'openai' && openai) {
+        const response = await openai.responses.create({
+          model: openaiModel,
+          input: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        })
+        const reply = response.output_text?.trim()
+        if (reply) return res.json({ reply, source: 'openai', model: openaiModel })
+      }
+    }
+
+    const fallbackResponse = { reply: generateFallbackReply(sanitizedOffer), source: 'template-fallback' }
+    if (includeDebug) fallbackResponse.debug = { reason: 'NO_AI_PROVIDER_CONFIGURED', aiProvider }
+    return res.json(fallbackResponse)
+  } catch (error) {
+    console.error('offer-reply AI failed:', error)
+    const fallbackResponse = { reply: generateFallbackReply(sanitizedOffer), source: 'template-fallback' }
+    if (includeDebug) fallbackResponse.debug = { reason: 'AI_REQUEST_FAILED', error: getSafeErrorDetails(error) }
+    return res.json(fallbackResponse)
+  }
+})
+
 app.listen(port, () => {
   console.log(`Creator Deal Assistant API running on http://localhost:${port}`)
 })

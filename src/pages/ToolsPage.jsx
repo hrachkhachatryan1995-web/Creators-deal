@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { analyzeOffer, calculatePrice } from '../utils/pricing'
 import useRevealAnimation from '../hooks/useRevealAnimation'
+import usePlan from '../hooks/usePlan'
 
 const SCENARIO_STORAGE_KEY = 'creator-deal-scenarios-v1'
 
 export default function ToolsPage() {
   const rootRef = useRevealAnimation({ cardStagger: 0.08 })
+  const { isPaid, plan } = usePlan()
   const [pricingMode, setPricingMode] = useState('pro')
   const [followers, setFollowers] = useState('50000')
   const [engagementRate, setEngagementRate] = useState('4.5')
@@ -113,6 +116,13 @@ export default function ToolsPage() {
 
     return Math.max(offerResult.betterPrice, priceRange.breakdown.recommendedAsk)
   }, [offerResult.betterPrice, priceRange])
+
+  const handleSetPricingMode = (mode) => {
+    setPricingMode(mode)
+    if (mode === 'basic') {
+      setMultiPlatform(false)
+    }
+  }
 
   const handleCalculatePricing = () => {
     setSubmittedPricingInputs(currentPricingInputs)
@@ -349,21 +359,36 @@ export default function ToolsPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <section data-card className="rounded-[2rem] panel lg:col-span-7 p-6">
+        <section data-card className="rounded-[2rem] panel lg:col-span-7 p-6 relative">
+          {!isPaid && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-[2rem] bg-[rgba(10,16,32,0.82)] backdrop-blur-sm px-8 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(108,92,231,0.18)] text-2xl">🔒</div>
+              <div>
+                <p className="text-lg font-semibold text-[var(--ink)]">Pricing Calculator is a paid feature</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Upgrade to Pro or Studio to unlock unlimited pricing calculations and deal analysis.</p>
+              </div>
+              <Link
+                to="/pricing"
+                className="rounded-full bg-[var(--primary)] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(108,92,231,0.30)] transition hover:opacity-90"
+              >
+                View plans
+              </Link>
+            </div>
+          )}
           <h2 className="text-2xl text-[var(--ink)]">Pricing Calculator</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">Switch to Pro mode for a market-real quote with usage rights and deal terms.</p>
 
           <div className="mt-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-xs sm:text-sm">
             <button
               type="button"
-              onClick={() => setPricingMode('basic')}
+              onClick={() => handleSetPricingMode('basic')}
               className={`rounded-full px-4 py-1.5 transition ${pricingMode === 'basic' ? 'bg-[var(--secondary)] text-[#032936]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
             >
               Basic
             </button>
             <button
               type="button"
-              onClick={() => setPricingMode('pro')}
+              onClick={() => handleSetPricingMode('pro')}
               className={`rounded-full px-4 py-1.5 transition ${pricingMode === 'pro' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
             >
               Pro
@@ -396,14 +421,6 @@ export default function ToolsPage() {
             </label>
 
             <label className="text-sm font-medium text-[var(--muted)]">
-              Multi-platform bundle
-              <select className="form-field" value={multiPlatform ? 'yes' : 'no'} onChange={(event) => setMultiPlatform(event.target.value === 'yes')}>
-                <option value="no">Single platform</option>
-                <option value="yes">Instagram + TikTok bundle</option>
-              </select>
-            </label>
-
-            <label className="text-sm font-medium text-[var(--muted)]">
               Content type
               <select className="form-field" value={contentType} onChange={(event) => setContentType(event.target.value)}>
                 <option value="post">Post</option>
@@ -420,56 +437,64 @@ export default function ToolsPage() {
               </label>
             )}
 
-            {multiPlatform && (
-              <>
-                <label className="text-sm font-medium text-[var(--muted)]">
-                  Second platform
-                  <select className="form-field" value={secondaryPlatform} onChange={(event) => setSecondaryPlatform(event.target.value)}>
-                    <option value="Instagram">Instagram</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="YouTube">YouTube</option>
-                  </select>
-                </label>
-
-                <label className="text-sm font-medium text-[var(--muted)]">
-                  Second platform followers
-                  <input type="number" min="0" className="form-field" value={secondaryFollowers} onChange={(event) => setSecondaryFollowers(event.target.value)} />
-                </label>
-
-                <label className="text-sm font-medium text-[var(--muted)]">
-                  Second platform engagement (%)
-                  <input type="number" min="0" step="0.1" className="form-field" value={secondaryEngagementRate} onChange={(event) => setSecondaryEngagementRate(event.target.value)} />
-                </label>
-
-                <label className="text-sm font-medium text-[var(--muted)]">
-                  Second platform average views
-                  <input type="number" min="0" className="form-field" value={secondaryAvgViews} onChange={(event) => setSecondaryAvgViews(event.target.value)} />
-                </label>
-
-                {contentType === 'story' && (
-                  <label className="text-sm font-medium text-[var(--muted)]">
-                    Second platform story views
-                    <input type="number" min="0" className="form-field" value={secondaryAvgStoryViews} onChange={(event) => setSecondaryAvgStoryViews(event.target.value)} />
-                  </label>
-                )}
-
-                <label className="text-sm font-medium text-[var(--muted)]">
-                  Audience overlap (%)
-                  <input type="number" min="0" max="80" className="form-field" value={audienceOverlap} onChange={(event) => setAudienceOverlap(event.target.value)} />
-                </label>
-
-                <label className="text-sm font-medium text-[var(--muted)] sm:col-span-2">
-                  Bundle type
-                  <select className="form-field" value={bundleType} onChange={(event) => setBundleType(event.target.value)}>
-                    <option value="crosspost">Cross-posted creative</option>
-                    <option value="custom">Platform-specific creative</option>
-                  </select>
-                </label>
-              </>
-            )}
-
             {pricingMode === 'pro' && (
               <>
+                <label className="text-sm font-medium text-[var(--muted)]">
+                  Multi-platform bundle
+                  <select className="form-field" value={multiPlatform ? 'yes' : 'no'} onChange={(event) => setMultiPlatform(event.target.value === 'yes')}>
+                    <option value="no">Single platform</option>
+                    <option value="yes">Instagram + TikTok bundle</option>
+                  </select>
+                </label>
+
+                {multiPlatform && (
+                  <>
+                    <label className="text-sm font-medium text-[var(--muted)]">
+                      Second platform
+                      <select className="form-field" value={secondaryPlatform} onChange={(event) => setSecondaryPlatform(event.target.value)}>
+                        <option value="Instagram">Instagram</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="YouTube">YouTube</option>
+                      </select>
+                    </label>
+
+                    <label className="text-sm font-medium text-[var(--muted)]">
+                      Second platform followers
+                      <input type="number" min="0" className="form-field" value={secondaryFollowers} onChange={(event) => setSecondaryFollowers(event.target.value)} />
+                    </label>
+
+                    <label className="text-sm font-medium text-[var(--muted)]">
+                      Second platform engagement (%)
+                      <input type="number" min="0" step="0.1" className="form-field" value={secondaryEngagementRate} onChange={(event) => setSecondaryEngagementRate(event.target.value)} />
+                    </label>
+
+                    <label className="text-sm font-medium text-[var(--muted)]">
+                      Second platform average views
+                      <input type="number" min="0" className="form-field" value={secondaryAvgViews} onChange={(event) => setSecondaryAvgViews(event.target.value)} />
+                    </label>
+
+                    {contentType === 'story' && (
+                      <label className="text-sm font-medium text-[var(--muted)]">
+                        Second platform story views
+                        <input type="number" min="0" className="form-field" value={secondaryAvgStoryViews} onChange={(event) => setSecondaryAvgStoryViews(event.target.value)} />
+                      </label>
+                    )}
+
+                    <label className="text-sm font-medium text-[var(--muted)]">
+                      Audience overlap (%)
+                      <input type="number" min="0" max="80" className="form-field" value={audienceOverlap} onChange={(event) => setAudienceOverlap(event.target.value)} />
+                    </label>
+
+                    <label className="text-sm font-medium text-[var(--muted)] sm:col-span-2">
+                      Bundle type
+                      <select className="form-field" value={bundleType} onChange={(event) => setBundleType(event.target.value)}>
+                        <option value="crosspost">Cross-posted creative</option>
+                        <option value="custom">Platform-specific creative</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+
                 <label className="text-sm font-medium text-[var(--muted)]">
                   Niche
                   <select className="form-field" value={niche} onChange={(event) => setNiche(event.target.value)}>

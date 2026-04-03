@@ -1,37 +1,37 @@
+const proUrl = import.meta.env.VITE_LS_PRO_URL
+  ? `${import.meta.env.VITE_LS_PRO_URL}?checkout[redirect_url]=${encodeURIComponent(window.location.origin + '/tools?plan=pro')}`
+  : null
+
 const plans = [
   {
-    name: 'Starter',
+    name: 'Free',
     price: '$0',
-    summary: 'For creators testing the workflow',
-    points: ['Core pricing calculator', 'Offer analyzer', 'Fallback reply generator'],
+    summary: 'Try the core workflow at no cost',
+    points: ['Offer analyzer', 'AI reply generator (Offer Reply page)', 'Basic access to tools'],
+    checkoutUrl: null,
   },
   {
     name: 'Pro',
     price: '$15',
     summary: 'For active creators handling deals every month',
-    points: ['Unlimited calculations', 'Stronger AI workflow later', 'Saved deal history in a future version'],
+    points: ['Full Pricing Calculator (Basic & Pro mode)', 'AI-powered reply generator', 'Saved deal scenarios', 'Priority support'],
     featured: true,
-  },
-  {
-    name: 'Studio',
-    price: '$39',
-    summary: 'For small teams or creator managers',
-    points: ['Unlimited workflows', 'Advanced deal insights', 'Priority support'],
+    checkoutUrl: proUrl,
   },
 ]
 
 const faq = [
   {
-    q: 'How does the reply generator work today?',
-    a: 'It currently runs on a fallback/template flow, so the product stays usable even before a paid AI provider is connected.',
+    q: 'How does the reply generator work?',
+    a: 'It uses Groq / OpenAI to analyze the brand offer and generate a polished, context-aware reply letter in seconds.',
   },
   {
-    q: 'Can real AI be connected later?',
-    a: 'Yes. The app is structured so a real provider like OpenAI can be added later without rebuilding the product from scratch.',
+    q: 'Is billing handled securely?',
+    a: 'Yes. Payments and subscriptions are powered by Lemon Squeezy — a trusted merchant of record that handles tax and compliance.',
   },
   {
-    q: 'Are these plans live for billing today?',
-    a: 'Right now they are part of the product positioning, so the product feels like a real SaaS even at MVP stage.',
+    q: 'Can I cancel anytime?',
+    a: 'Absolutely. You can cancel your subscription at any time from your Lemon Squeezy customer portal with no extra fees.',
   },
 ]
 
@@ -41,11 +41,11 @@ export default function PricingPage() {
       <section className="rounded-[2rem] panel p-6 sm:p-8">
         <h1 className="text-4xl text-[var(--ink)]">Pricing</h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-[var(--muted)] sm:text-base">
-          These plans show how the product can grow from a lightweight creator tool into a full creator revenue workflow. Even at MVP stage, the positioning should already feel strong.
+          Pick a plan and start negotiating brand deals with confidence. Payments are handled securely by Lemon Squeezy.
         </p>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-3">
+      <section className="grid gap-5 max-w-2xl mx-auto w-full lg:grid-cols-2">
         {plans.map((plan) => (
           <article
             key={plan.name}
@@ -56,7 +56,10 @@ export default function PricingPage() {
             }`}
           >
             <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[var(--brand)]">{plan.name}</p>
-            <p className="mt-3 text-4xl font-bold text-[var(--ink)]">{plan.price}<span className="text-sm font-medium text-[var(--muted)]">/month</span></p>
+            <p className="mt-3 text-4xl font-bold text-[var(--ink)]">
+              {plan.price}
+              {plan.price !== '$0' && <span className="text-sm font-medium text-[var(--muted)]">/month</span>}
+            </p>
             <p className="mt-3 text-sm leading-6 text-[var(--muted)]">{plan.summary}</p>
             <div className="mt-5 space-y-2">
               {plan.points.map((point) => (
@@ -65,9 +68,35 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-            <button className={`mt-6 w-full rounded-full px-4 py-3 text-sm font-semibold transition ${plan.featured ? 'bg-[var(--accent)] text-slate-950' : 'bg-[rgba(255,255,255,0.05)] text-[var(--ink)]'}`}>
-              Choose {plan.name}
-            </button>
+
+            {plan.checkoutUrl ? (
+              <a
+                href={plan.checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`mt-6 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition ${
+                  plan.featured
+                    ? 'bg-[var(--accent)] text-slate-950 hover:opacity-90'
+                    : 'bg-[rgba(255,255,255,0.05)] text-[var(--ink)] hover:bg-[rgba(255,255,255,0.09)]'
+                }`}
+              >
+                Get {plan.name}
+              </a>
+            ) : plan.price === '$0' ? (
+              <a
+                href="/tools"
+                className="mt-6 block w-full rounded-full bg-[rgba(255,255,255,0.05)] px-4 py-3 text-center text-sm font-semibold text-[var(--ink)] transition hover:bg-[rgba(255,255,255,0.09)]"
+              >
+                Start for free
+              </a>
+            ) : (
+              <button
+                disabled
+                className="mt-6 w-full cursor-not-allowed rounded-full bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm font-semibold text-[var(--muted)] opacity-50"
+              >
+                Coming soon
+              </button>
+            )}
           </article>
         ))}
       </section>
