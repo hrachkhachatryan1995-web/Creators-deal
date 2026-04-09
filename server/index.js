@@ -343,7 +343,6 @@ async function generateReplyWithProvider(payload) {
         if (reply) {
           return {
             reply,
-            source: 'groq',
             model: groqModel,
           }
         }
@@ -560,7 +559,7 @@ app.post('/api/offer-reply', async (req, res) => {
         if (response.ok) {
           const data = await response.json()
           const reply = data?.choices?.[0]?.message?.content?.trim()
-          if (reply) return res.json({ reply, source: 'groq', model: groqModel })
+          if (reply) return res.json({ reply,  model: groqModel })
         }
       }
 
@@ -583,6 +582,143 @@ app.post('/api/offer-reply', async (req, res) => {
   } catch (error) {
     console.error('offer-reply AI failed:', error)
     const fallbackResponse = { reply: generateFallbackReply(sanitizedOffer), source: 'template-fallback' }
+    if (includeDebug) fallbackResponse.debug = { reason: 'AI_REQUEST_FAILED', error: getSafeErrorDetails(error) }
+    return res.json(fallbackResponse)
+  }
+})
+
+app.post('/api/counter-offer', async (req, res) => {
+  const {
+    brandOffer,
+    counterAmount,
+    minAccept,
+    platform,
+    contentType,
+    niche,
+    usageRights,
+    exclusivityDays,
+    deliverables,
+    geo,
+    creatorTier,
+    tone,
+    justifications,
+  } = req.body ?? {}
+
+  if (!counterAmount || Number(counterAmount) <= 0) {
+    return res.status(400).json({ error: 'counterAmount is required.' })
+  }
+
+  const payload = {
+    brandOffer: Number(brandOffer) || 0,
+    counterAmount: Number(counterAmount),
+    minAccept: Number(minAccept) || 0,
+    platform: String(platform || 'TikTok').slice(0, 50),
+    contentType: String(contentType || 'video').slice(0, 50),
+    niche: String(niche || 'lifestyle').slice(0, 50),
+    usageRights: String(usageRights || 'organic').slice(0, 50),
+    exclusivityDays: Number(exclusivityDays) || 0,
+    deliverables: Number(deliverables) || 1,
+    geo: String(geo || 'global').slice(0, 50),
+    creatorTier: String(creatorTier || 'steady').slice(0, 50),
+    tone: String(tone || 'professional').slice(0, 50),
+    justifications: Array.isArray(justifications)
+      ? justifications.slice(0, 3).map((j) => String(j).slice(0, 200))
+      : [],
+  }
+
+  function buildSystemPrompt() {
+    return (
+      'You are a professional content creator writing a counter-offer to a brand deal. ' +
+      'Write a concise, confident, and polished counter-offer letter. ' +
+      'State the counter amount clearly. Be respectful and leave the door open for negotiation. ' +
+      'Keep it under 180 words. Output only the letter body with greeting and sign-off.'
+    )
+  }
+
+  function buildUserPrompt(p) {
+    const toneMap = { professional: 'professional and formal', warm: 'warm and friendly', firm: 'firm and direct' }
+    const toneLabel = toneMap[p.tone] || 'professional and confident'
+    const justificationsText = p.justifications.length
+      ? `\nRate justification points (reference 1-2 naturally):\n${p.justifications.map((j) => `- ${j}`).join('\n')}`
+      : ''
+    return [
+      `Brand's offer: $${p.brandOffer}`,
+      `My counter-offer: $${p.counterAmount}`,
+      `My walk-away minimum: $${p.minAccept}`,
+      `Platform: ${p.platform}, Content type: ${p.contentType}, Niche: ${p.niche}`,
+      `Usage rights: ${p.usageRights}, Exclusivity: ${p.exclusivityDays} days, Deliverables: ${p.deliverables}`,
+      `Market: ${p.geo}, Creator tier: ${p.creatorTier}`,
+      justificationsText,
+      ``,
+      `Write a ${toneLabel} counter-offer letter. Clearly propose $${p.counterAmount}. Keep it under 180 words.`,
+    ].join('\n')
+  }
+
+  function generateFallbackCounterOffer(p) {
+    const offerText = p.brandOffer ? `$${p.brandOffer}` : 'your offered budget'
+    const rawJ = p.justifications[0] || null
+    const j1 = rawJ ? rawJ.charAt(0).toLowerCase() + rawJ.slice(1) : 'my audience metrics and market rates for this type of content'
+    return [
+      'Hi there,',
+      '',
+      `Thank you for reaching out about this collaboration. I appreciate you considering me for this campaign.`,
+      '',
+      `After reviewing your offer of ${offerText}, I wanted to share some context on my rates. Based on ${j1}, my rate for this partnership would be $${p.counterAmount}.`,
+      '',
+      `If there is any flexibility in the budget, I would love to make this work. I am also happy to discuss adjusting the scope to better fit your budget if needed.`,
+      '',
+      'Looking forward to finding a path forward,',
+      '[Your Name]',
+    ].join('\n')
+  }
+
+  const systemPrompt = buildSystemPrompt()
+  const userPrompt = buildUserPrompt(payload)
+  const providerOrder = resolveProviderOrder()
+
+  try {
+    for (const provider of providerOrder) {
+      if (provider === 'groq') {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: groqModel,
+            temperature: 0.7,
+            max_tokens: 320,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        })
+        if (response.ok) {
+          const data = await response.json()
+          const letter = data?.choices?.[0]?.message?.content?.trim()
+          if (letter) return res.json({ letter, source: 'groq', model: groqModel })
+
+        }
+      }
+
+      if (provider === 'openai' && openai) {
+        const response = await openai.responses.create({
+          model: openaiModel,
+          input: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        })
+        const letter = response.output_text?.trim()
+        if (letter) return res.json({ letter, source: 'openai', model: openaiModel })
+      }
+    }
+
+    const fallbackResponse = { letter: generateFallbackCounterOffer(payload), source: 'template-fallback' }
+    if (includeDebug) fallbackResponse.debug = { reason: 'NO_AI_PROVIDER_CONFIGURED' }
+    return res.json(fallbackResponse)
+  } catch (error) {
+    console.error('counter-offer AI failed:', error)
+    const fallbackResponse = { letter: generateFallbackCounterOffer(payload), source: 'template-fallback' }
     if (includeDebug) fallbackResponse.debug = { reason: 'AI_REQUEST_FAILED', error: getSafeErrorDetails(error) }
     return res.json(fallbackResponse)
   }

@@ -69,6 +69,11 @@ export default function ToolsPage() {
   const [savedScenarios, setSavedScenarios] = useState([])
   const [scenarioNotice, setScenarioNotice] = useState('')
   const [submittedPricingInputs, setSubmittedPricingInputs] = useState(null)
+  const [counterLetter, setCounterLetter] = useState('')
+  const [counterLetterSource, setCounterLetterSource] = useState('')
+  const [counterLetterLoading, setCounterLetterLoading] = useState(false)
+  const [counterLetterCopied, setCounterLetterCopied] = useState(false)
+  const [counterTone, setCounterTone] = useState('professional')
 
   const currentPricingInputs = useMemo(
     () => ({
@@ -142,6 +147,31 @@ export default function ToolsPage() {
 
     return Math.max(offerResult.betterPrice, priceRange.breakdown.recommendedAsk)
   }, [offerResult.betterPrice, priceRange])
+
+  const counterJustifications = useMemo(() => {
+    if (!priceRange || !priceRange.breakdown) return []
+    const bullets = []
+
+    if (priceRange.breakdown.primaryViews) {
+      bullets.push(
+        `${platform} ${contentType} with ${Number(followers).toLocaleString()} followers and ${engagementRate}% engagement generates ~${priceRange.breakdown.primaryViews.toLocaleString()} effective views`,
+      )
+    }
+
+    if (pricingMode === 'pro' && priceRange.breakdown.marketAdjusted) {
+      bullets.push(
+        `${niche} content in the ${geo} market at ${creatorTier} tier is market-adjusted to $${priceRange.breakdown.marketAdjusted}`,
+      )
+    }
+
+    if (pricingMode === 'pro' && Number(exclusivityDays) > 0 && priceRange.breakdown.exclusivityFee > 0) {
+      bullets.push(`${exclusivityDays}-day exclusivity restriction adds $${priceRange.breakdown.exclusivityFee} to the base rate`)
+    } else if (pricingMode === 'pro' && usageRights !== 'organic' && priceRange.breakdown.usageFee > 0) {
+      bullets.push(`${usageRights} usage rights add $${priceRange.breakdown.usageFee} to the base rate`)
+    }
+
+    return bullets.slice(0, 3)
+  }, [priceRange, platform, contentType, followers, engagementRate, niche, geo, creatorTier, pricingMode, exclusivityDays, usageRights])
 
   const handleSetPricingMode = (mode) => {
     setPricingMode(mode)
@@ -372,6 +402,63 @@ export default function ToolsPage() {
       setTimeout(() => setCopied(false), 1400)
     } catch {
       setCopied(false)
+    }
+  }
+
+  const handleGenerateCounterOffer = async () => {
+    if (!priceRange) {
+      setCounterLetter('Please click "Calculate Pricing" first to generate a data-backed counter-offer.')
+      setCounterLetterSource('')
+      return
+    }
+
+    setCounterLetterLoading(true)
+    setCounterLetterCopied(false)
+
+    try {
+      const response = await fetch('/api/counter-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          brandOffer,
+          counterAmount: counterOffer,
+          minAccept: priceRange.breakdown?.minimumAccept ?? priceRange.min,
+          platform,
+          contentType,
+          niche,
+          usageRights,
+          exclusivityDays,
+          deliverables,
+          geo,
+          creatorTier,
+          tone: counterTone,
+          justifications: counterJustifications,
+        }),
+      })
+
+      if (!response.ok) throw new Error('Counter-offer generation failed')
+
+      const data = await response.json()
+      setCounterLetter(data.letter || '')
+      setCounterLetterSource(data.source || '')
+    } catch {
+      setCounterLetter(
+        `Hi there,\n\nThank you for the offer. Based on my audience metrics and the market rate for this type of content, my counter-offer for this collaboration is $${counterOffer}.\n\nI am happy to discuss how we can structure the deal to make this work for both sides.\n\nBest,\n[Your Name]`,
+      )
+      setCounterLetterSource('template-fallback')
+    } finally {
+      setCounterLetterLoading(false)
+    }
+  }
+
+  const handleCopyCounterLetter = async () => {
+    if (!counterLetter) return
+    try {
+      await navigator.clipboard.writeText(counterLetter)
+      setCounterLetterCopied(true)
+      setTimeout(() => setCounterLetterCopied(false), 1400)
+    } catch {
+      setCounterLetterCopied(false)
     }
   }
 
@@ -741,6 +828,100 @@ export default function ToolsPage() {
         </section>
 
         <section data-card className="rounded-[2rem] panel lg:col-span-12 p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl text-[var(--ink)]">Counter-Offer Generator</h2>
+            <span className="rounded-full bg-[rgba(108,92,231,0.18)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">New</span>
+          </div>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Generate a data-backed counter-offer letter with your rate justification built in — ready to send to the brand.
+          </p>
+
+          {!priceRange ? (
+            <p className="mt-5 text-sm text-[var(--muted)]">Run the Pricing Calculator first to unlock your counter-offer.</p>
+          ) : (
+            <>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-[1.5rem] panel-soft p-5">
+                  <p className="text-xs text-[var(--muted)]">Brand offered</p>
+                  <p className="mt-1 text-2xl font-bold text-[var(--ink)]">${Number(brandOffer) || 0}</p>
+                </div>
+                <div className="rounded-[1.5rem] panel-soft p-5">
+                  <p className="text-xs text-[var(--muted)]">Your counter</p>
+                  <p className="mt-1 text-2xl font-bold text-[var(--secondary)]">${counterOffer}</p>
+                </div>
+                {priceRange.breakdown?.minimumAccept && (
+                  <div className="rounded-[1.5rem] panel-soft p-5">
+                    <p className="text-xs text-[var(--muted)]">Walk-away floor</p>
+                    <p className="mt-1 text-2xl font-bold text-[var(--ink)]">${priceRange.breakdown.minimumAccept}</p>
+                  </div>
+                )}
+              </div>
+
+              {counterJustifications.length > 0 && (
+                <div className="mt-5 rounded-[1.5rem] border border-[rgba(108,92,231,0.20)] bg-[rgba(108,92,231,0.06)] p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--primary)]">Rate Justification Points</p>
+                  <ul className="mt-3 space-y-2">
+                    {counterJustifications.map((j, i) => (
+                      <li key={i} className="flex items-start gap-2.5 text-sm leading-6 text-[var(--muted)]">
+                        <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--primary)]" />
+                        {j}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="mt-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-xs">
+                {['professional', 'warm', 'firm'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setCounterTone(t)}
+                    className={`rounded-full px-4 py-1.5 capitalize transition ${counterTone === t ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="soft-button"
+                  onClick={handleGenerateCounterOffer}
+                  disabled={counterLetterLoading}
+                >
+                  {counterLetterLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Generating...
+                    </span>
+                  ) : (
+                    'Generate counter-offer'
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  className="soft-secondary-button"
+                  onClick={handleCopyCounterLetter}
+                  disabled={!counterLetter}
+                >
+                  {counterLetterCopied ? 'Copied' : 'Copy letter'}
+                </button>
+              </div>
+
+              <div className="mt-6 rounded-[1.5rem] panel-soft p-5">
+                <p className="mb-2 text-sm font-semibold text-[var(--ink)]">Counter-offer letter</p>
+                <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">
+                  {counterLetter || 'Your counter-offer letter will appear here after you click Generate.'}
+                </p>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section data-card className="rounded-[2rem] panel lg:col-span-12 p-6">
           <h2 className="text-2xl text-[var(--ink)]">Reply Generator</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">Generate a faster, more natural brand reply based on the offer and the message context.</p>
 
@@ -768,11 +949,6 @@ export default function ToolsPage() {
 
           <div className="mt-6 rounded-[1.5rem] panel-soft p-5">
             <p className="mb-2 text-sm font-semibold text-[var(--ink)]">Generated reply</p>
-            {replySource && (
-              <p className="mb-2 text-xs text-[var(--muted)]">
-                Source: <span className="font-semibold text-[var(--ink)]">{replySource}</span>
-              </p>
-            )}
             {replyDebug && (
               <p className="mb-2 text-xs text-[#fca5a5]">
                 Debug: <span className="font-semibold">{replyDebug}</span>

@@ -163,11 +163,7 @@ export default function OfferReplyPage() {
             </button>
           </div>
 
-          {replySource && (
-            <p className="mt-3 text-xs text-[var(--muted)]">
-              Source: <span className="font-semibold text-[var(--ink)]">{replySource}</span>
-            </p>
-          )}
+
           {replyDebug && (
             <p className="mt-1 text-xs text-[#fca5a5]">
               Debug: <span className="font-semibold">{replyDebug}</span>
