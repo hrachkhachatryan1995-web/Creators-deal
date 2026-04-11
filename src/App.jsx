@@ -1,5 +1,5 @@
-import { Suspense, lazy } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Suspense, lazy, useEffect } from 'react'
+import { Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -9,6 +9,16 @@ const AboutPage = lazy(() => import('./pages/AboutPage'))
 const OfferReplyPage = lazy(() => import('./pages/OfferReplyPage'))
 
 function App() {
+  const location = useLocation()
+
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag('config', 'G-7RQGP5S2G4', {
+        page_path: location.pathname + location.search,
+      })
+    }
+  }, [location])
+
   return (
     <Suspense
       fallback={
