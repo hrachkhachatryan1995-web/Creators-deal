@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const redirectUrl = typeof window !== 'undefined'
   ? `${window.location.origin}/tools?plan=pro`
   : '/tools?plan=pro'
@@ -10,7 +12,7 @@ const plans = [
     name: 'Free',
     price: '$0',
     summary: 'Try the core workflow at no cost',
-    points: ['Offer analyzer', 'AI reply generator', 'Pricing Calculator — locked'],
+    points: ['Offer analyzer', 'AI reply generator', 'Pricing Calculator — Basic mode (Pro mode requires Pro)'],
     checkoutUrl: null,
   },
   {
@@ -103,6 +105,22 @@ export default function PricingPage() {
           </article>
         ))}
       </section>
+
+      <p className="mx-auto max-w-2xl text-center text-xs leading-6 text-[var(--muted)]">
+        By purchasing you agree to our{' '}
+        <Link to="/terms" className="font-medium text-[var(--secondary)] underline-offset-2 hover:underline">
+          Terms of Service
+        </Link>{' '}
+        and{' '}
+        <Link to="/privacy" className="font-medium text-[var(--secondary)] underline-offset-2 hover:underline">
+          Privacy Policy
+        </Link>
+        . Refund rules are described in our{' '}
+        <Link to="/refunds" className="font-medium text-[var(--secondary)] underline-offset-2 hover:underline">
+          Refund Policy
+        </Link>
+        .
+      </p>
 
       <section className="rounded-[2rem] panel p-6 sm:p-8">
         <h2 className="text-3xl text-[var(--ink)]">Frequently asked questions</h2>

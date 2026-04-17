@@ -7,6 +7,11 @@ const ToolsPage = lazy(() => import('./pages/ToolsPage'))
 const PricingPage = lazy(() => import('./pages/PricingPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
 const OfferReplyPage = lazy(() => import('./pages/OfferReplyPage'))
+const TermsPage = lazy(() => import('./pages/TermsPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
+const RefundsPage = lazy(() => import('./pages/RefundsPage'))
+const CookiesPage = lazy(() => import('./pages/CookiesPage'))
+const ContactPage = lazy(() => import('./pages/ContactPage'))
 
 function App() {
   const location = useLocation()
@@ -34,6 +39,11 @@ function App() {
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/offer-reply" element={<OfferReplyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/refunds" element={<RefundsPage />} />
+          <Route path="/cookies" element={<CookiesPage />} />
+          <Route path="/contact" element={<ContactPage />} />
         </Route>
       </Routes>
     </Suspense>

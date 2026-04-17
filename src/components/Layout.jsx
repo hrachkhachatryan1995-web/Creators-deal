@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 
 const navigation = [
   { to: '/', label: 'Home', icon: '⌂' },
@@ -54,6 +54,30 @@ export default function Layout() {
       </header>
 
       <Outlet />
+
+      <footer className="mt-12 border-t border-[var(--line)] pt-8 pb-4 text-xs text-[var(--muted)] sm:text-sm">
+        <nav aria-label="Legal and policies" className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <Link to="/terms" className="transition hover:text-[var(--ink)]">
+            Terms of Service
+          </Link>
+          <Link to="/privacy" className="transition hover:text-[var(--ink)]">
+            Privacy Policy
+          </Link>
+          <Link to="/refunds" className="transition hover:text-[var(--ink)]">
+            Refunds
+          </Link>
+          <Link to="/cookies" className="transition hover:text-[var(--ink)]">
+            Cookies
+          </Link>
+          <Link to="/contact" className="transition hover:text-[var(--ink)]">
+            Contact
+          </Link>
+        </nav>
+        <p className="mt-4 text-center text-[11px] text-[var(--muted)]/90">
+          © {new Date().getFullYear()} Creator Deal Assistant. Not legal advice — review policies with counsel for your
+          region.
+        </p>
+      </footer>
 
       <nav aria-label="Bottom navigation" className="fixed bottom-3 left-1/2 z-30 flex w-[min(94vw,520px)] -translate-x-1/2 items-center justify-between gap-1 rounded-[1.3rem] border border-[rgba(248,250,252,0.12)] bg-[rgba(16,24,39,0.92)] p-1.5 shadow-[0_20px_45px_rgba(2,6,23,0.55)] backdrop-blur-xl lg:hidden">
         {navigation.map((item) => (

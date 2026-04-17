@@ -8,7 +8,7 @@ const SCENARIO_STORAGE_KEY = 'creator-deal-scenarios-v1'
 
 export default function ToolsPage() {
   const rootRef = useRevealAnimation({ cardStagger: 0.08 })
-  const { isPaid, plan, upgradeToPro } = usePlan()
+  const { isPaid, upgradeToPro } = usePlan()
   const [verifyEmail, setVerifyEmail] = useState('')
   const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'loading' | 'error'
   const [verifyError, setVerifyError] = useState('')
@@ -35,13 +35,13 @@ export default function ToolsPage() {
       setVerifyError('Could not reach the server. Please try again.')
     }
   }
-  const [pricingMode, setPricingMode] = useState('pro')
+  const [pricingMode, setPricingMode] = useState(() => (isPaid ? 'pro' : 'basic'))
   const [followers, setFollowers] = useState('50000')
   const [engagementRate, setEngagementRate] = useState('4.5')
   const [avgViews, setAvgViews] = useState('22000')
   const [avgStoryViews, setAvgStoryViews] = useState('6500')
   const [platform, setPlatform] = useState('TikTok')
-  const [multiPlatform, setMultiPlatform] = useState(true)
+  const [multiPlatform, setMultiPlatform] = useState(() => isPaid)
   const [secondaryPlatform, setSecondaryPlatform] = useState('Instagram')
   const [secondaryFollowers, setSecondaryFollowers] = useState('30000')
   const [secondaryEngagementRate, setSecondaryEngagementRate] = useState('3.2')
@@ -472,13 +472,15 @@ export default function ToolsPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <section data-card className="rounded-[2rem] panel lg:col-span-7 p-6 relative">
-          {!isPaid && (
+        <section data-card className="relative isolate rounded-[2rem] panel lg:col-span-7 p-6">
+          {!isPaid && pricingMode === 'pro' && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 rounded-[2rem] bg-[rgba(10,16,32,0.82)] backdrop-blur-sm px-8 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(108,92,231,0.18)] text-2xl">🔒</div>
               <div>
-                <p className="text-lg font-semibold text-[var(--ink)]">Pricing Calculator is a Pro feature</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Upgrade to Pro to unlock unlimited pricing calculations and deal analysis.</p>
+                <p className="text-lg font-semibold text-[var(--ink)]">Pro pricing mode</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+                  Upgrade to unlock the full market-adjusted calculator with usage rights, bundles, and deal terms. Basic mode stays free.
+                </p>
               </div>
               <Link
                 to="/pricing"
@@ -486,6 +488,13 @@ export default function ToolsPage() {
               >
                 Upgrade to Pro
               </Link>
+              <button
+                type="button"
+                onClick={() => handleSetPricingMode('basic')}
+                className="text-sm font-semibold text-[var(--secondary)] underline-offset-4 transition hover:underline"
+              >
+                Continue with Basic (free)
+              </button>
               <div className="w-full max-w-xs">
                 <p className="mb-2 text-xs text-[var(--muted)]">Already paid? Enter your order email to restore access:</p>
                 <form onSubmit={handleVerify} className="flex flex-col gap-2">
@@ -509,27 +518,30 @@ export default function ToolsPage() {
               </div>
             </div>
           )}
-          <h2 className="text-2xl text-[var(--ink)]">Pricing Calculator</h2>
-          <p className="mt-2 text-sm text-[var(--muted)]">Switch to Pro mode for a market-real quote with usage rights and deal terms.</p>
+          {/* Keep title + mode tabs above the paywall overlay so free users can always switch back to Basic */}
+          <div className="relative z-20 pb-4">
+            <h2 className="text-2xl text-[var(--ink)]">Pricing Calculator</h2>
+            <p className="mt-2 text-sm text-[var(--muted)]">Switch to Pro mode for a market-real quote with usage rights and deal terms.</p>
 
-          <div className="mt-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-xs sm:text-sm">
-            <button
-              type="button"
-              onClick={() => handleSetPricingMode('basic')}
-              className={`rounded-full px-4 py-1.5 transition ${pricingMode === 'basic' ? 'bg-[var(--secondary)] text-[#032936]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
-            >
-              Basic
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetPricingMode('pro')}
-              className={`rounded-full px-4 py-1.5 transition ${pricingMode === 'pro' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
-            >
-              Pro
-            </button>
+            <div className="mt-5 inline-flex rounded-full border border-white/15 bg-white/5 p-1 text-xs sm:text-sm shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+              <button
+                type="button"
+                onClick={() => handleSetPricingMode('basic')}
+                className={`rounded-full px-4 py-1.5 transition ${pricingMode === 'basic' ? 'bg-[var(--secondary)] text-[#032936]' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
+              >
+                Basic
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetPricingMode('pro')}
+                className={`rounded-full px-4 py-1.5 transition ${pricingMode === 'pro' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted)] hover:text-[var(--ink)]'}`}
+              >
+                Pro
+              </button>
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="relative z-0 mt-2 grid gap-4 sm:grid-cols-2">
             <label className="text-sm font-medium text-[var(--muted)]">
               Followers
               <input type="number" min="0" className="form-field" value={followers} onChange={(event) => setFollowers(event.target.value)} />
