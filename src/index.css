@@ -214,7 +214,20 @@ h3 {
   mask-composite: exclude;
   pointer-events: none;
 }
+/* Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+button {
+  cursor: pointer;
+}
 @media (max-width: 1023px) {
   body {
     background:

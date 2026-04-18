@@ -20,9 +20,11 @@ export default function Layout() {
       <header className="sticky top-2 z-20 mb-5 rounded-[1.4rem] panel p-3 backdrop-blur-xl sm:top-4 sm:mb-8 sm:rounded-[1.75rem]">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand)]/12 text-sm font-bold text-[var(--brand)] sm:h-11 sm:w-11">
-              CDA
-            </div>
+            <Link to="/"> 
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand)]/12 text-sm font-bold text-[var(--brand)] sm:h-11 sm:w-11">
+                  CDA
+              </div>
+            </Link>    
             <div className="min-w-0">
               <p className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--brand)] sm:text-xs">
               Creator Deal Assistant
