@@ -47,31 +47,47 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function register(payload) {
-    const data = await requestJson('/api/auth-register', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-    return data
+    try {
+      const data = await requestJson('/api/auth-register', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      return data
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function login(payload) {
-    const data = await requestJson('/api/auth-login', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-    setUser(data.user || null)
-    return data
+    try {
+      const data = await requestJson('/api/auth-login', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      setUser(data.user || null)
+      return data
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function logout() {
-    await requestJson('/api/auth-logout', { method: 'POST' })
-    setUser(null)
+    try {
+      await requestJson('/api/auth-logout', { method: 'POST' })
+      setUser(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function syncPlan() {
-    const data = await requestJson('/api/sync-plan', { method: 'POST' })
-    setUser(data.user || null)
-    return data
+    try {
+      const data = await requestJson('/api/sync-plan', { method: 'POST' })
+      setUser(data.user || null)
+      return data
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

@@ -11,14 +11,12 @@ export async function getCurrentUser(req) {
 export async function requireCurrentUser(req, res) {
   const session = readAppSession(req)
   if (!session?.userId) {
-    res.status(401).json({ error: 'Authentication required' })
-    return null
+    return res.status(401).json({ error: 'Authentication required' })
   }
 
   const profile = await getProfileById(session.userId)
   if (!profile) {
-    res.status(401).json({ error: 'Authentication required' })
-    return null
+    return res.status(401).json({ error: 'Authentication required' })
   }
 
   return profile
