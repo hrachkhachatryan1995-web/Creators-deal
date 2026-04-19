@@ -12,7 +12,6 @@ export default function OfferReplyPage() {
   const [offerText, setOfferText] = useState('')
   const [tone, setTone] = useState('professional')
   const [reply, setReply] = useState('')
-  const [replySource, setReplySource] = useState('')
   const [replyDebug, setReplyDebug] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -23,7 +22,6 @@ export default function OfferReplyPage() {
     setIsLoading(true)
     setCopied(false)
     setReply('')
-    setReplySource('')
     setReplyDebug('')
 
     try {
@@ -37,7 +35,6 @@ export default function OfferReplyPage() {
 
       const data = await response.json()
       setReply(data.reply || '')
-      setReplySource(data.source || '')
       if (data.debug) {
         const debugMsg = data.debug.error?.message
           ? `${data.debug.reason}: ${data.debug.error.message}`
@@ -48,7 +45,6 @@ export default function OfferReplyPage() {
       setReply(
         'Hi there,\n\nThank you for reaching out about this collaboration opportunity. I appreciate you thinking of me for this campaign.\n\nI would love to discuss the details further, including the budget, deliverables, and timeline. Could you share more information so I can put together a proper response?\n\nLooking forward to hearing from you,\n[Your Name]',
       )
-      setReplySource('template-fallback')
       setReplyDebug('REQUEST_FAILED')
     } finally {
       setIsLoading(false)
@@ -69,7 +65,6 @@ export default function OfferReplyPage() {
   const handleClear = () => {
     setOfferText('')
     setReply('')
-    setReplySource('')
     setReplyDebug('')
     setCopied(false)
   }

@@ -2,6 +2,12 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import OpenAI from 'openai'
+import authRegisterHandler from '../api/auth-register.js'
+import authLoginHandler from '../api/auth-login.js'
+import authLogoutHandler from '../api/auth-logout.js'
+import authSessionHandler from '../api/auth-session.js'
+import pricingHandler from '../api/pricing.js'
+import syncPlanHandler from '../api/sync-plan.js'
 
 dotenv.config()
 
@@ -24,6 +30,13 @@ const groqApiKey = process.env.GROQ_API_KEY || ''
 
 app.use(cors())
 app.use(express.json())
+
+app.all('/api/auth-register', (req, res) => authRegisterHandler(req, res))
+app.all('/api/auth-login', (req, res) => authLoginHandler(req, res))
+app.all('/api/auth-logout', (req, res) => authLogoutHandler(req, res))
+app.all('/api/auth-session', (req, res) => authSessionHandler(req, res))
+app.all('/api/pricing', (req, res) => pricingHandler(req, res))
+app.all('/api/sync-plan', (req, res) => syncPlanHandler(req, res))
 
 function pick(items) {
   return items[Math.floor(Math.random() * items.length)]
@@ -441,47 +454,9 @@ app.post('/api/reply', async (req, res) => {
 })
 
 app.post('/api/verify', async (req, res) => {
-  const { email } = req.body ?? {}
-  if (typeof email !== 'string' || !email.includes('@')) {
-    return res.status(400).json({ error: 'Valid email required' })
-  }
-
-  const apiKey = process.env.LEMON_SQUEEZY_API_KEY
-  if (!apiKey) return res.status(500).json({ error: 'Payment verification not configured' })
-
-  try {
-    const response = await fetch(
-      `https://api.lemonsqueezy.com/v1/subscriptions?filter[user_email]=${encodeURIComponent(email.trim().toLowerCase())}`,
-      { headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/vnd.api+json' } },
-    )
-    if (!response.ok) return res.status(502).json({ error: 'Could not reach payment provider' })
-
-    const data = await response.json()
-    const subscriptions = data?.data || []
-    const variantId = process.env.LEMON_SQUEEZY_VARIANT_ID ? String(process.env.LEMON_SQUEEZY_VARIANT_ID) : null
-
-    const active = subscriptions.find((sub) => {
-      const status = sub?.attributes?.status
-      const subVariantId = String(sub?.attributes?.variant_id || '')
-      const isActive = status === 'active' || status === 'trialing' || status === 'past_due'
-      return variantId ? isActive && subVariantId === variantId : isActive
-    })
-    if (active) return res.json({ plan: 'pro' })
-
-    const ordersRes = await fetch(
-      `https://api.lemonsqueezy.com/v1/orders?filter[user_email]=${encodeURIComponent(email.trim().toLowerCase())}`,
-      { headers: { Authorization: `Bearer ${apiKey}`, Accept: 'application/vnd.api+json' } },
-    )
-    if (ordersRes.ok) {
-      const ordersData = await ordersRes.json()
-      const paidOrder = (ordersData?.data || []).find((o) => o?.attributes?.status === 'paid')
-      if (paidOrder) return res.json({ plan: 'pro' })
-    }
-
-    return res.json({ plan: 'free' })
-  } catch {
-    return res.status(502).json({ error: 'Verification failed' })
-  }
+  return res.status(410).json({
+    error: 'Deprecated endpoint. Sign in with a verified account and use /api/sync-plan instead.',
+  })
 })
 
 app.post('/api/offer-reply', async (req, res) => {

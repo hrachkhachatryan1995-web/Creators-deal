@@ -3,45 +3,43 @@ import { Link } from 'react-router-dom'
 import { analyzeOffer, calculatePrice } from '../utils/pricing'
 import useRevealAnimation from '../hooks/useRevealAnimation'
 import usePlan from '../hooks/usePlan'
+import { useAuth } from '../auth/useAuth'
 
 const SCENARIO_STORAGE_KEY = 'creator-deal-scenarios-v1'
 
 export default function ToolsPage() {
   const rootRef = useRevealAnimation({ cardStagger: 0.08 })
-  const { isPaid, upgradeToPro } = usePlan()
-  const [verifyEmail, setVerifyEmail] = useState('')
-  const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'loading' | 'error'
+  const { isPaid, refreshPlan, loading: planLoading, user } = usePlan()
+  const { isAuthenticated, isVerified, syncPlan } = useAuth()
+  const [verifyState, setVerifyState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
   const [verifyError, setVerifyError] = useState('')
+  const [priceRange, setPriceRange] = useState(null)
+  const [pricingLoading, setPricingLoading] = useState(false)
 
-  async function handleVerify(e) {
-    e.preventDefault()
+  async function handleSyncPlan() {
     setVerifyState('loading')
     setVerifyError('')
     try {
-      const res = await fetch('/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: verifyEmail }),
-      })
-      const data = await res.json()
+      const data = await syncPlan()
       if (data.plan === 'pro') {
-        upgradeToPro()
+        await refreshPlan()
+        setVerifyState('success')
       } else {
         setVerifyState('error')
-        setVerifyError('No active subscription found for that email.')
+        setVerifyError('No active subscription found for this verified account email.')
       }
     } catch {
       setVerifyState('error')
-      setVerifyError('Could not reach the server. Please try again.')
+      setVerifyError('Could not sync the purchase. Please try again.')
     }
   }
-  const [pricingMode, setPricingMode] = useState(() => (isPaid ? 'pro' : 'basic'))
+  const [pricingMode, setPricingMode] = useState('basic')
   const [followers, setFollowers] = useState('50000')
   const [engagementRate, setEngagementRate] = useState('4.5')
   const [avgViews, setAvgViews] = useState('22000')
   const [avgStoryViews, setAvgStoryViews] = useState('6500')
   const [platform, setPlatform] = useState('TikTok')
-  const [multiPlatform, setMultiPlatform] = useState(() => isPaid)
+  const [multiPlatform, setMultiPlatform] = useState(false)
   const [secondaryPlatform, setSecondaryPlatform] = useState('Instagram')
   const [secondaryFollowers, setSecondaryFollowers] = useState('30000')
   const [secondaryEngagementRate, setSecondaryEngagementRate] = useState('3.2')
@@ -62,15 +60,12 @@ export default function ToolsPage() {
   const [brandOffer, setBrandOffer] = useState('120')
   const [brandMessage, setBrandMessage] = useState('Hi! We would love to collaborate on a short sponsored video. Our budget is $120 for this campaign.')
   const [reply, setReply] = useState('')
-  const [replySource, setReplySource] = useState('')
   const [replyDebug, setReplyDebug] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [savedScenarios, setSavedScenarios] = useState([])
   const [scenarioNotice, setScenarioNotice] = useState('')
-  const [submittedPricingInputs, setSubmittedPricingInputs] = useState(null)
   const [counterLetter, setCounterLetter] = useState('')
-  const [counterLetterSource, setCounterLetterSource] = useState('')
   const [counterLetterLoading, setCounterLetterLoading] = useState(false)
   const [counterLetterCopied, setCounterLetterCopied] = useState(false)
   const [counterTone, setCounterTone] = useState('professional')
@@ -130,11 +125,6 @@ export default function ToolsPage() {
     ],
   )
 
-  const priceRange = useMemo(
-    () => (submittedPricingInputs ? calculatePrice(submittedPricingInputs) : null),
-    [submittedPricingInputs],
-  )
-
   const offerResult = useMemo(
     () => (priceRange ? analyzeOffer(brandOffer, priceRange) : { status: 'Run calculation', betterPrice: 0 }),
     [brandOffer, priceRange],
@@ -180,10 +170,42 @@ export default function ToolsPage() {
     }
   }
 
-  const handleCalculatePricing = () => {
-    setSubmittedPricingInputs(currentPricingInputs)
-    setScenarioNotice('Pricing calculated')
-    setTimeout(() => setScenarioNotice(''), 1400)
+  useEffect(() => {
+    if (isPaid) {
+      setMultiPlatform(true)
+    }
+  }, [isPaid])
+
+  const handleCalculatePricing = async () => {
+    setPricingLoading(true)
+    try {
+      if (pricingMode === 'pro') {
+        const response = await fetch('/api/pricing', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ ...currentPricingInputs, pricingMode: 'pro' }),
+        })
+
+        if (!response.ok) {
+          throw new Error('PRO_PRICING_FAILED')
+        }
+
+        const result = await response.json()
+        setPriceRange(result)
+      } else {
+        setPriceRange(calculatePrice(currentPricingInputs))
+      }
+
+      setScenarioNotice('Pricing calculated')
+      setTimeout(() => setScenarioNotice(''), 1400)
+    } catch {
+      setPriceRange(null)
+      setScenarioNotice(pricingMode === 'pro' ? 'Pro access required. Sign in and sync your purchase first.' : 'Could not calculate pricing')
+      setTimeout(() => setScenarioNotice(''), 2200)
+    } finally {
+      setPricingLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -281,34 +303,8 @@ export default function ToolsPage() {
     setGeo(scenario.geo || 'global')
     setBrandOffer(String(scenario.brandOffer || '0'))
 
-    setSubmittedPricingInputs({
-      followers: String(scenario.followers || '0'),
-      engagementRate: String(scenario.engagementRate || '0'),
-      avgViews: String(scenario.avgViews || '0'),
-      avgStoryViews: String(scenario.avgStoryViews || '0'),
-      platform: scenario.platform || 'TikTok',
-      contentType: scenario.contentType || 'video',
-      multiPlatform: Boolean(scenario.multiPlatform),
-      secondaryPlatform: scenario.secondaryPlatform || 'Instagram',
-      secondaryFollowers: String(scenario.secondaryFollowers || '0'),
-      secondaryEngagementRate: String(scenario.secondaryEngagementRate || '0'),
-      secondaryAvgViews: String(scenario.secondaryAvgViews || '0'),
-      secondaryAvgStoryViews: String(scenario.secondaryAvgStoryViews || '0'),
-      audienceOverlap: String(scenario.audienceOverlap || '0'),
-      bundleType: scenario.bundleType || 'crosspost',
-      pricingMode: scenario.pricingMode || 'basic',
-      niche: scenario.niche || 'lifestyle',
-      creatorTier: scenario.creatorTier || 'steady',
-      productionLevel: scenario.productionLevel || 'standard',
-      usageRights: scenario.usageRights || 'organic',
-      exclusivityDays: String(scenario.exclusivityDays || '0'),
-      deliverables: String(scenario.deliverables || '1'),
-      turnaround: scenario.turnaround || 'standard',
-      revisions: String(scenario.revisions || '1'),
-      geo: scenario.geo || 'global',
-    })
-
-    setScenarioNotice('Scenario loaded')
+    setPriceRange(null)
+    setScenarioNotice('Scenario loaded. Recalculate pricing.')
     setTimeout(() => setScenarioNotice(''), 1400)
   }
 
@@ -320,7 +316,6 @@ export default function ToolsPage() {
   const handleGenerateReply = async () => {
     if (!priceRange) {
       setReply('Please click "Calculate Pricing" first so I can generate a reply from the current quote.')
-      setReplySource('')
       setReplyDebug('')
       return
     }
@@ -373,7 +368,6 @@ export default function ToolsPage() {
 
       const data = await response.json()
       setReply(data.reply)
-      setReplySource(data.source || '')
       if (data.debug) {
         const debugMessage = data.debug.error?.message
           ? `${data.debug.reason}: ${data.debug.error.message}`
@@ -384,7 +378,6 @@ export default function ToolsPage() {
       }
     } catch {
       setReply('Hi, thank you for the offer. Based on the scope of this collaboration, my standard rate is higher, and the suggested range above is closer to what works for me. If that fits your budget, I would be happy to discuss next steps.')
-      setReplySource('template-fallback')
       setReplyDebug('REQUEST_FAILED')
     } finally {
       setIsLoading(false)
@@ -408,7 +401,6 @@ export default function ToolsPage() {
   const handleGenerateCounterOffer = async () => {
     if (!priceRange) {
       setCounterLetter('Please click "Calculate Pricing" first to generate a data-backed counter-offer.')
-      setCounterLetterSource('')
       return
     }
 
@@ -440,12 +432,10 @@ export default function ToolsPage() {
 
       const data = await response.json()
       setCounterLetter(data.letter || '')
-      setCounterLetterSource(data.source || '')
     } catch {
       setCounterLetter(
         `Hi there,\n\nThank you for the offer. Based on my audience metrics and the market rate for this type of content, my counter-offer for this collaboration is $${counterOffer}.\n\nI am happy to discuss how we can structure the deal to make this work for both sides.\n\nBest,\n[Your Name]`,
       )
-      setCounterLetterSource('template-fallback')
     } finally {
       setCounterLetterLoading(false)
     }
@@ -496,25 +486,34 @@ export default function ToolsPage() {
                 Continue with Basic (free)
               </button>
               <div className="w-full max-w-xs">
-                <p className="mb-2 text-xs text-[var(--muted)]">Already paid? Enter your order email to restore access:</p>
-                <form onSubmit={handleVerify} className="flex flex-col gap-2">
-                  <input
-                    type="email"
-                    required
-                    placeholder="your@email.com"
-                    value={verifyEmail}
-                    onChange={(e) => { setVerifyEmail(e.target.value); setVerifyState('idle'); setVerifyError('') }}
-                    className="form-field text-sm"
-                  />
+                <p className="mb-2 text-xs text-[var(--muted)]">
+                  {isAuthenticated
+                    ? isVerified
+                      ? `Signed in as ${user?.email}. Sync your Pro purchase to this account.`
+                      : 'Verify your account email first, then sync the purchase.'
+                    : 'Sign in or create an account first. Pro is tied to verified accounts.'}
+                </p>
+                <div className="flex flex-col gap-2">
                   {verifyError && <p className="text-xs text-red-400">{verifyError}</p>}
-                  <button
-                    type="submit"
-                    disabled={verifyState === 'loading'}
-                    className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-[var(--ink)] transition hover:bg-white/10 disabled:opacity-50"
-                  >
-                    {verifyState === 'loading' ? 'Checking…' : 'Restore access'}
-                  </button>
-                </form>
+                  {verifyState === 'success' && <p className="text-xs text-emerald-300">Pro access is now linked to this account.</p>}
+                  {isAuthenticated ? (
+                    <button
+                      type="button"
+                      onClick={handleSyncPlan}
+                      disabled={verifyState === 'loading' || !isVerified}
+                      className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-[var(--ink)] transition hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {verifyState === 'loading' ? 'Syncing...' : 'Sync Pro purchase'}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/auth"
+                      className="rounded-full border border-white/20 px-5 py-2 text-xs font-semibold text-[var(--ink)] transition hover:bg-white/10"
+                    >
+                      Sign in / Create account
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -727,8 +726,8 @@ export default function ToolsPage() {
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
-            <button type="button" className="soft-button" onClick={handleCalculatePricing}>
-              Calculate Pricing
+            <button type="button" className="soft-button" onClick={handleCalculatePricing} disabled={pricingLoading || planLoading}>
+              {pricingLoading ? 'Calculating...' : 'Calculate Pricing'}
             </button>
             {!priceRange && (
               <p className="self-center text-xs text-[var(--muted)]">

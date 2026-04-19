@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 
 const redirectUrl = typeof window !== 'undefined'
-  ? `${window.location.origin}/tools?plan=pro`
-  : '/tools?plan=pro'
+  ? `${window.location.origin}/tools?checkout=success`
+  : '/tools?checkout=success'
 const proUrl = import.meta.env.VITE_LS_PRO_URL
   ? `${import.meta.env.VITE_LS_PRO_URL}?checkout[redirect_url]=${encodeURIComponent(redirectUrl)}`
   : null
@@ -41,6 +42,8 @@ const faq = [
 ]
 
 export default function PricingPage() {
+  const { isAuthenticated, isVerified } = useAuth()
+
   return (
     <div className="space-y-6">
       <section className="rounded-[2rem] panel p-6 sm:p-8">
@@ -75,18 +78,41 @@ export default function PricingPage() {
             </div>
 
             {plan.checkoutUrl ? (
-              <a
-                href={plan.checkoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`mt-6 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition ${
-                  plan.featured
-                    ? 'bg-[var(--accent)] text-slate-950 hover:opacity-90'
-                    : 'bg-[rgba(255,255,255,0.05)] text-[var(--ink)] hover:bg-[rgba(255,255,255,0.09)]'
-                }`}
-              >
-                Get {plan.name}
-              </a>
+              isAuthenticated && isVerified ? (
+                <>
+                  <a
+                    href={plan.checkoutUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`mt-6 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition ${
+                      plan.featured
+                        ? 'bg-[var(--accent)] text-slate-950 hover:opacity-90'
+                        : 'bg-[rgba(255,255,255,0.05)] text-[var(--ink)] hover:bg-[rgba(255,255,255,0.09)]'
+                    }`}
+                  >
+                    Get {plan.name}
+                  </a>
+                  <p className="mt-3 text-xs leading-6 text-[var(--muted)]">
+                    After checkout, return to Tools and sync the purchase to your verified account.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/auth"
+                    className={`mt-6 block w-full rounded-full px-4 py-3 text-center text-sm font-semibold transition ${
+                      plan.featured
+                        ? 'bg-[var(--accent)] text-slate-950 hover:opacity-90'
+                        : 'bg-[rgba(255,255,255,0.05)] text-[var(--ink)] hover:bg-[rgba(255,255,255,0.09)]'
+                    }`}
+                  >
+                    Create verified account first
+                  </Link>
+                  <p className="mt-3 text-xs leading-6 text-[var(--muted)]">
+                    Pro access is linked to a verified account, not a typed email restore field.
+                  </p>
+                </>
+              )
             ) : plan.price === '$0' ? (
               <a
                 href="/tools"
@@ -121,6 +147,16 @@ export default function PricingPage() {
         </Link>
         .
       </p>
+
+      {!isAuthenticated && (
+        <p className="mx-auto max-w-2xl rounded-[1.5rem] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-5 py-4 text-center text-sm leading-7 text-[var(--muted)]">
+          Start from the{' '}
+          <Link to="/auth" className="font-medium text-[var(--secondary)] underline-offset-2 hover:underline">
+            account page
+          </Link>{' '}
+          so checkout can be tied to your verified login.
+        </p>
+      )}
 
       <section className="rounded-[2rem] panel p-6 sm:p-8">
         <h2 className="text-3xl text-[var(--ink)]">Frequently asked questions</h2>

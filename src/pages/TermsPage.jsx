@@ -35,13 +35,11 @@ export default function TermsPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="2. No traditional accounts">
+      <LegalSection title="2. Accounts and paid access">
         <p>
-          The Service is not built around a password-protected user database in the application. Access to paid
-          features is indicated in your browser (for example local storage and/or checkout return URLs) and may be
-          confirmed by email against Lemon Squeezy as described on the Tools page. That model is convenient but is not
-          the same as bank-grade entitlement management; you are responsible for the security of your own device and
-          browser profile.
+          The Service includes password-protected user accounts with email verification. Paid access is intended to be
+          linked to a verified account and may be synced by matching that verified account email with Lemon Squeezy
+          purchase data. You are responsible for maintaining the security of your login credentials and email inbox.
         </p>
       </LegalSection>
 

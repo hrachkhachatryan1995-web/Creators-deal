@@ -12,6 +12,7 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 const RefundsPage = lazy(() => import('./pages/RefundsPage'))
 const CookiesPage = lazy(() => import('./pages/CookiesPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
+const AuthPage = lazy(() => import('./pages/AuthPage'))
 
 function App() {
   const location = useLocation()
@@ -44,6 +45,7 @@ function App() {
           <Route path="/refunds" element={<RefundsPage />} />
           <Route path="/cookies" element={<CookiesPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/auth" element={<AuthPage />} />
         </Route>
       </Routes>
     </Suspense>

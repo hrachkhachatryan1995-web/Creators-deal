@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 
 const navigation = [
   { to: '/', label: 'Home', icon: '⌂' },
@@ -15,6 +16,8 @@ function linkClass({ isActive }) {
 }
 
 export default function Layout() {
+  const { user, isAuthenticated, isPaid, logout } = useAuth()
+
   return (
     <div className="app-shell mx-auto min-h-screen w-full max-w-6xl px-3 pb-24 pt-3 sm:px-6 sm:pb-6 sm:pt-5 lg:px-8 lg:py-8">
       <header className="sticky top-2 z-20 mb-5 rounded-[1.4rem] panel p-3 backdrop-blur-xl sm:top-4 sm:mb-8 sm:rounded-[1.75rem]">
@@ -45,13 +48,31 @@ export default function Layout() {
             </nav>
           </div>
 
-          <NavLink
-            to="/tools"
-            aria-label="Open tools"
-            className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-slate-950 shadow-[0_10px_24px_rgba(0,200,83,0.24)] transition hover:opacity-95 sm:px-5 sm:py-3 sm:text-sm"
-          >
-            Try App
-          </NavLink>
+          <div className="flex shrink-0 items-center gap-2">
+            {isAuthenticated ? (
+              <>
+                <div className="hidden rounded-full border border-white/10 bg-white/5 px-3 py-2 text-right lg:block">
+                  <p className="max-w-[180px] truncate text-xs font-semibold text-[var(--ink)]">{user.email}</p>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">{isPaid ? 'Pro account' : user.isVerified ? 'Verified account' : 'Email not verified'}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="inline-flex items-center justify-center rounded-full border border-white/15 px-4 py-2.5 text-xs font-semibold text-[var(--ink)] transition hover:bg-white/10 sm:px-5 sm:py-3 sm:text-sm"
+                >
+                  Log out
+                </button>
+              </>
+            ) : (
+              <NavLink
+                to="/auth"
+                aria-label="Open account access"
+                className="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-slate-950 shadow-[0_10px_24px_rgba(0,200,83,0.24)] transition hover:opacity-95 sm:px-5 sm:py-3 sm:text-sm"
+              >
+                Sign in
+              </NavLink>
+            )}
+          </div>
         </div>
       </header>
 

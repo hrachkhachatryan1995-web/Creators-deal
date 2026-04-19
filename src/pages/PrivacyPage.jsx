@@ -31,11 +31,11 @@ export default function PrivacyPage() {
           <li>Generating draft replies and counter-offer messages using optional AI features</li>
         </ul>
         <p className="mt-3">
-          The Service does not require account creation or password login and does not maintain a centralized user
-          profile database.
+          The Service supports account creation with email verification. We maintain a limited account database so users
+          can sign in and keep paid access linked to a verified account.
         </p>
         <p className="mt-2">
-          <strong>We do not maintain user accounts, identity profiles, or a centralized user database.</strong>
+          <strong>We maintain a limited user account database for authentication, verification, and plan access.</strong>
         </p>
       </LegalSection>
 
@@ -44,7 +44,6 @@ export default function PrivacyPage() {
           The Service uses your browser’s local storage to store lightweight data required for functionality:
         </p>
         <ul className="list-disc pl-5 space-y-2 mt-2">
-          <li>Plan status (Free or Pro)</li>
           <li>Saved calculator scenarios (optional)</li>
         </ul>
         <p className="mt-2">
@@ -57,10 +56,10 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-2 mt-2">
           <li>Offer text, brand messages, and negotiation inputs</li>
           <li>Calculator-derived values for generating replies</li>
-          <li>Email address for subscription verification (if used)</li>
+          <li>Account email address and authenticated session data</li>
         </ul>
         <p className="mt-3">
-          This data is used only to generate responses and is not used to build user profiles.
+          This data is used only to operate the Service, authenticate your account, sync paid access, and generate responses.
         </p>
         <p className="mt-2">
           <strong>Important:</strong> Do not submit sensitive personal, financial, or confidential business information.
@@ -125,8 +124,7 @@ export default function PrivacyPage() {
           Depending on your location, you may have rights to access, correct, or delete your personal data.
         </p>
         <p className="mt-2">
-          Since we do not maintain user accounts or profiles, most requests can be handled by clearing browser data or
-          contacting us directly.
+          Account-related requests may be handled through your signed-in account or by contacting us directly.
         </p>
       </LegalSection>
 

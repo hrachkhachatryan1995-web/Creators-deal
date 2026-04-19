@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import LegalDocument, { LegalSection } from '../components/LegalDocument'
-import { contactEmail, operatorLegalName } from '../config/site'
+import { contactEmail } from '../config/site'
 
 export default function RefundsPage() {
   return (
